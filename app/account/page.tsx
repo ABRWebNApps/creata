@@ -1,0 +1,313 @@
+"use client";
+
+import { useSubscription, PLAN_CONFIGS } from "@/lib/subscription-context";
+import { useAuth } from "@/lib/auth-context";
+import Link from "next/link";
+import {
+  Sparkles,
+  User,
+  CreditCard,
+  Settings,
+  LogOut,
+  CheckCircle,
+  Zap,
+  ChevronRight,
+  ArrowLeft,
+  Calendar,
+  Activity,
+} from "lucide-react";
+
+export default function AccountPage() {
+  const { user, signOut } = useAuth();
+  const { subscription, loading } = useSubscription();
+
+  const currentPlan = subscription
+    ? PLAN_CONFIGS[subscription.plan]
+    : PLAN_CONFIGS.free;
+  const isPaid = subscription?.plan !== "free";
+
+  const usedCredits =
+    subscription && currentPlan
+      ? currentPlan.runs - subscription.creditsRemaining
+      : 0;
+  const totalCredits = currentPlan?.runs ?? 1;
+  const creditPercent = Math.round(
+    ((totalCredits - usedCredits) / totalCredits) * 100
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+        <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-gray-300 dark:border-gray-700 border-t-black dark:border-t-white"></div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      {/* Page Content */}
+      <div className="max-w-4xl mx-auto px-6 py-12 sm:py-16">
+        {/* Back link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to home
+        </Link>
+
+        {/* Page title */}
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-10">
+          Account
+        </h1>
+
+        <div className="grid gap-8">
+          {/* ── Your Profile ── */}
+          <section className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Your Profile</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Manage your account details
+                </p>
+              </div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 sm:p-5">
+              <label className="block text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
+                Email address
+              </label>
+              <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">
+                {user?.email ?? "Not signed in"}
+              </p>
+            </div>
+          </section>
+
+          {/* ── Your Plan ── */}
+          <section className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                <Zap className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Your Plan</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Current subscription details
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {/* Plan card */}
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 sm:p-6 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{currentPlan?.emoji}</span>
+                    <div>
+                      <p className="text-lg font-semibold">{currentPlan?.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        ${currentPlan?.price}/month &middot; {currentPlan?.runs}{" "}
+                        {currentPlan?.runs === 1 ? "run" : "runs"}
+                      </p>
+                    </div>
+                  </div>
+                  {isPaid ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">
+                      <CheckCircle className="w-3 h-3" />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-full">
+                      Free
+                    </span>
+                  )}
+                </div>
+
+                {/* Credits remaining bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="font-medium">Credits remaining</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {subscription?.creditsRemaining ?? 0} / {totalCredits}
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        creditPercent > 50
+                          ? "bg-green-500"
+                          : creditPercent > 20
+                          ? "bg-amber-500"
+                          : "bg-red-500"
+                      }`}
+                      style={{ width: `${creditPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Subscription end date */}
+                {subscription?.subscriptionEnd && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      Renews on{" "}
+                      {new Date(subscription.subscriptionEnd).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Usage indicator */}
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <Activity className="w-4 h-4" />
+                <span>
+                  Used {usedCredits} of {totalCredits}{" "}
+                  {totalCredits === 1 ? "run" : "runs"} this period
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Plan Features ── */}
+          <section className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Plan Features</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  What&apos;s included in your {currentPlan?.name} plan
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 sm:p-6">
+              <ul className="space-y-3">
+                {currentPlan?.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-start gap-3 text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300 capitalize">
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {currentPlan?.id === "free" && (
+                <div className="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                    Upgrade to unlock more features:
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {Object.values(PLAN_CONFIGS)
+                      .filter((p) => p.id !== "free")
+                      .map((plan) => (
+                        <div
+                          key={plan.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{plan.emoji}</span>
+                            <div>
+                              <p className="text-sm font-semibold capitalize">
+                                {plan.name}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                ${plan.price}/mo &middot; {plan.runs} runs
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Upgrade / Manage ── */}
+          <section className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CreditCard className="w-5 h-5 text-white dark:text-black" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {isPaid ? "Manage Subscription" : "Upgrade Your Plan"}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {isPaid
+                      ? "Change your plan or cancel anytime"
+                      : "Unlock more runs and premium features"}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/pricing"
+                className={`inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-xl text-sm transition-all whitespace-nowrap ${
+                  isPaid
+                    ? "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-700"
+                    : "bg-black dark:bg-white text-white dark:text-black hover:opacity-90"
+                }`}
+              >
+                {isPaid ? "Manage" : "Upgrade"}
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </section>
+
+          {/* ── Subscription History (Placeholder) ── */}
+          <section className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Subscription History</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Past payments and plan changes
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-8 text-center">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Settings className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Subscription history will appear here once available.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 dark:border-gray-800 py-8">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <p className="text-sm text-gray-400 dark:text-gray-600">
+            Creata — AI-native creator discovery
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-600">
+            &copy; {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
+    </main>
+  );
+}
