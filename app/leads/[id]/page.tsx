@@ -456,22 +456,24 @@ export default function LeadProfilePage({
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 text-white rounded-lg sm:rounded-xl font-semibold hover:shadow-xl transition-all text-sm sm:text-base ${
-                      lead.platform === "instagram"
-                                                                    ? "bg-gradient-to-r from-purple-500 to-pink-600"
-                                                                    : lead.platform === "x"
-                                                                    ? "bg-gradient-to-r from-gray-700 to-gray-900"
-                                                                    : lead.platform === "facebook"
-                                                                    ? "bg-gradient-to-r from-blue-600 to-blue-800"
-                                                                    : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                    }`}
-                  >
-                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="hidden lg:inline">
-                      Message on{" "}
-                      {lead.platform === "instagram" ? "Instagram" : lead.platform === "x" ? "X" : lead.platform === "facebook" ? "Facebook" : "TikTok"}
-                    </span>
-                    <span className="lg:hidden">Message</span>
-                  </a>
+                                          lead.platform === "instagram"
+                                            ? "bg-gradient-to-r from-purple-500 to-pink-600"
+                                            : lead.platform === "x"
+                                            ? "bg-gradient-to-r from-gray-700 to-gray-900"
+                                            : lead.platform === "facebook"
+                                            ? "bg-gradient-to-r from-blue-600 to-blue-800"
+                                            : lead.platform === "linkedin"
+                                            ? "bg-gradient-to-r from-blue-700 to-blue-900"
+                                            : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                        }`}
+                                      >
+                                        <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        <span className="hidden lg:inline">
+                                          Message on{" "}
+                                          {lead.platform === "instagram" ? "Instagram" : lead.platform === "x" ? "X" : lead.platform === "facebook" ? "Facebook" : lead.platform === "linkedin" ? "LinkedIn" : "TikTok"}
+                                        </span>
+                                        <span className="lg:hidden">Message</span>
+                                      </a>
 
                   {lead.bio_link && (
                     <a
@@ -739,13 +741,13 @@ export default function LeadProfilePage({
               </div>
             </div>
 
-            {/* TikTok Profile */}
-            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  TikTok Profile
-                </p>
+            {/* Profile Link */}
+                        <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+                          <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              {lead.platform === "instagram" ? "Instagram" : lead.platform === "x" ? "X" : lead.platform === "facebook" ? "Facebook" : lead.platform === "linkedin" ? "LinkedIn" : "TikTok"} Profile
+                            </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1 sm:gap-0">
                   <p className="text-sm sm:text-base text-gray-900 dark:text-white truncate">
                     {lead.profile_url}

@@ -375,7 +375,7 @@ export default function CategoryDetailPage({
               key={lead.id}
               className="bg-card border rounded-xl p-4 w-full"
             >
-              <div className="flex items-start gap-3 mb-3">
+              <Link href={`/leads/${lead.id}`} className="flex items-start gap-3 mb-3">
                 <img
                   src={lead.avatar_url ?? undefined}
                   alt={lead.nickname || ""}
@@ -405,7 +405,7 @@ export default function CategoryDetailPage({
                   </div>
                   <p className="text-xs text-muted-foreground">@{lead.handle}</p>
                 </div>
-              </div>
+              </Link>
 
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="bg-muted rounded-lg p-2.5">
