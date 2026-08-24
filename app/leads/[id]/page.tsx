@@ -139,15 +139,15 @@ function analyzePainPoints(bio: string | null): PainPoint[] {
       severity: "medium",
       category: "E-commerce",
       evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["product", "ecommerc", "shop", "store"]) + '"' : "Indicated by bio context",
-      solution: "Propose UGC campaigns or affiliate partnerships — product-based creators need reliable traffic and conversion lift"
+      solution: "Propose UGC campaigns or affiliate partnerships — product-based sellers need reliable traffic and conversion lift"
     });
   }
-  if (text.includes("art") || text.includes("creator") || text.includes("musician") || text.includes("design")) {
+  if (text.includes("art") || text.includes("creative") || text.includes("musician") || text.includes("design")) {
     points.push({
       text: "Difficulty monetizing creative work and building sustainable income",
       severity: "high",
       category: "Creative",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["art", "creator", "musician", "design"]) + '"' : "Indicated by bio context",
+      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["art", "creative", "musician", "design"]) + '"' : "Indicated by bio context",
       solution: "Offer platform partnerships or sponsored commissions — creatives value brand deals that respect their artistic integrity"
     });
   }

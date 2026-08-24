@@ -9,21 +9,21 @@ import Nav from "@/components/Nav";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Creata - AI-Powered Creator Discovery",
-  description: "Find and connect with perfect creators for your brand",
+  title: "Creata - AI-Powered Lead Generation",
+  description: "Find and connect with high-quality social media leads for your B2B pipeline",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
-    title: "Creata - AI-Powered Creator Discovery",
-    description: "Find and connect with perfect creators for your brand",
+    title: "Creata - AI-Powered Lead Generation",
+    description: "Find and connect with high-quality social media leads for your B2B pipeline",
     siteName: "Creata",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Creata - AI-Powered Creator Discovery",
-    description: "Find and connect with perfect creators for your brand",
+    title: "Creata - AI-Powered Lead Generation",
+    description: "Find and connect with high-quality social media leads for your B2B pipeline",
   },
 };
 

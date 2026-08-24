@@ -372,7 +372,7 @@ export default function MyLeadsPage() {
                 <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No leads saved yet</h3>
                 <p className="text-muted-foreground text-sm mb-6">
-                  Start discovering creators and save them
+                  Start finding leads and save them
                 </p>
                 <Link
                   href="/"

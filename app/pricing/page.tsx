@@ -367,7 +367,7 @@ function PricingContent() {
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-100 dark:border-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-sm text-gray-400 dark:text-gray-600">Creata — AI-native creator discovery</p>
+          <p className="text-sm text-gray-400 dark:text-gray-600">Creata — AI-native lead generation</p>
           <p className="text-sm text-gray-400 dark:text-gray-600">
             &copy; {new Date().getFullYear()}
           </p>

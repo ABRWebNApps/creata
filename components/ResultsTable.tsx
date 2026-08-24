@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Creator {
+interface Lead {
   handle: string;
   nickname: string;
   profile_url: string;
@@ -42,8 +42,8 @@ interface Creator {
 
 interface ResultsTableProps {
   data: {
-    creators?: Creator[];
-    total_found?: number;
+      leads?: Lead[];
+      total_found?: number;
   };
 }
 
@@ -54,8 +54,8 @@ interface Category {
 }
 
 export default function ResultsTable({ data }: ResultsTableProps) {
-  const creators = data?.creators || [];
-  const total_found = data?.total_found || creators.length;
+  const creators = data?.leads || [];
+    const total_found = data?.total_found || creators.length;
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set());
   const [savingAll, setSavingAll] = useState(false);
@@ -67,7 +67,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
 
   // Category picker dialog
     const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-      const [pendingCreator, setPendingCreator] = useState<Creator | null>(null);
+      const [pendingCreator, setPendingCreator] = useState<Lead | null>(null);
       const [saveAllMode, setSaveAllMode] = useState(false);
       const [categories, setCategories] = useState<Category[]>([]);
       const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
@@ -114,13 +114,13 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     return (
       <div className="bg-background rounded-2xl border shadow-sm p-12 text-center">
         <p className="text-muted-foreground">
-          No creators found. Try a different search query.
+          No leads found. Try a different search query.
         </p>
       </div>
     );
   }
 
-  const openSaveDialog = (creator: Creator, saveAll = false) => {
+  const openSaveDialog = (creator: Lead, saveAll = false) => {
       setPendingCreator(creator);
       setSelectedCategoryId("");
       setShowNewCategory(false);
@@ -158,7 +158,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     }
   };
 
-  const saveLeadWithCategory = async (creator: Creator, categoryId: string) => {
+  const saveLeadWithCategory = async (creator: Lead, categoryId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       alert("Please sign in to save leads");
@@ -199,7 +199,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     }
   };
 
-  const saveLead = async (creator: Creator) => {
+  const saveLead = async (creator: Lead) => {
     openSaveDialog(creator);
   };
 
@@ -328,7 +328,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-2xl font-bold text-white">
-            🎯 Found {total_found} Creators
+            🎯 Found {total_found} Leads
           </h3>
           <p className="text-blue-100">Click save to pick a category</p>
         </div>
@@ -341,7 +341,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                 ? "bg-white/80 text-blue-600 cursor-not-allowed"
                 : "bg-white text-blue-600 hover:shadow-lg"
             }`}
-            title="Save all creators to My Leads"
+            title="Save all leads to My Leads"
           >
             {savingAll ? (
               <span className="text-sm">
@@ -481,7 +481,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
           <table className="w-full">
             <thead className="bg-muted/50 border-b">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Creator</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Lead</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Followers</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Engagement</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Contact</th>

@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       total_found: creators.length,
-      creators,
+      leads: creators,
     });
   } catch (error: any) {
     console.error("Facebook search error:", error);

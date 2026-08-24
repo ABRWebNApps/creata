@@ -83,7 +83,7 @@ export default function SignUpPage() {
             Create your Creata account
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Start discovering creators today
+            Start finding leads today
           </p>
         </div>
 

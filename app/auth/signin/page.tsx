@@ -41,7 +41,7 @@ export default function SignInPage() {
             Welcome back to Creata
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Sign in to continue discovering creators and quality leads
+            Sign in to continue finding quality leads
           </p>
         </div>
 

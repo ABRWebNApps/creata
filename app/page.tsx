@@ -106,7 +106,7 @@ export default function Home() {
               in seconds, not weeks.
             </h1>
             <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2 sm:px-0">
-              Creata turns any brief into a ranked list of real, active social media creators — filtered by platform, niche, and location. No spreadsheets, no manual scrolling, no guesswork.
+              Creata turns any brief into a ranked list of real, active social media leads — filtered by platform, niche, and location. No spreadsheets, no manual scrolling, no guesswork.
             </p>
           </div>
 
@@ -261,7 +261,7 @@ export default function Home() {
           {!results && !loading && (
             <div className="flex gap-2 overflow-x-auto flex-nowrap pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center [&::-webkit-scrollbar]:hidden">
               {(searchMode === "leads"
-                ? ["Get me crypto leads", "Find fitness influencers", "Healthcare creators", "Tech founders and CEOs"]
+                ? ["Get me crypto leads", "Find fitness influencers", "Healthcare leads", "Tech founders and CEOs"]
                 : ["How do I start digital marketing?", "How to start forex trading?", "How do I grow my small business?", "How to make money online in Nigeria?"]
               ).map((example) => (
                 <button
@@ -302,15 +302,15 @@ export default function Home() {
             <div>
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">The problem</p>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">
-                The creator economy is a $250B market — but finding the right creators is still broken.
+                The influencer economy is a $250B market — but finding the right leads is still broken.
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-8">
-                Brands spend weeks scrolling hashtags, DMing for rates, and building spreadsheets. By the time they find someone, the opportunity is gone — or the creator has been booked.
+                Brands spend weeks scrolling hashtags, DMing for rates, and building spreadsheets. By the time they find someone, the opportunity is gone.
               </p>
               <div className="space-y-4">
                 {[
                   "Real-time discovery across TikTok, Instagram, X & LinkedIn in one query",
-                  "AI ranks creators by relevance, engagement, and audience fit — not follower count",
+                  "AI ranks each lead by relevance, engagement, and audience fit — not follower count",
                   "Filter by location, platform, and niche without switching tabs",
                   "Save leads instantly and revisit them from any device",
                 ].map((item) => (
@@ -345,7 +345,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">How it works</p>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-16">
-            Three clicks to your next creator
+            Three clicks to your next lead
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -374,7 +374,7 @@ export default function Home() {
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { quote: "Creata cut our creator discovery time from two weeks to about 20 seconds. It's honestly insane.", name: "Sarah K.", role: "Brand Marketing, D2C Beauty" },
+              { quote: "Creata cut our lead generation time from two weeks to about 20 seconds. It's honestly insane.", name: "Sarah K.", role: "Brand Marketing, D2C Beauty" },
               { quote: "We used to pay agencies thousands for lists that were outdated the moment we got them. Creata is live and it shows.", name: "Marcus J.", role: "Growth Lead, Fintech" },
               { quote: "The location filter alone is a game-changer. We found local micro-influencers in Lagos in minutes.", name: "Tunde A.", role: "Founder, Web3 Agency" },
             ].map((t) => (
@@ -395,14 +395,14 @@ export default function Home() {
       <section className="border-t py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">
-            Ready to find your next creator?
+            Ready to find your next lead?
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
-            Join brands and agencies that have turned creator discovery from a chore into a cheat code.
+            Join brands and agencies that have turned lead generation from a chore into a cheat code.
           </p>
           <Link href="/auth/signin">
             <Button size="lg" className="text-base px-8">
-              Start discovering <ArrowRight className="w-4 h-4" />
+              Start searching <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
         </div>
@@ -414,7 +414,7 @@ export default function Home() {
       <footer className="border-t py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
-            Creata — AI-native creator discovery
+            Creata — AI-native lead generation
           </p>
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()}
