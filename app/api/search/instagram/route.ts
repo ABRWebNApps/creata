@@ -163,12 +163,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       total_found: allCreators.length,
-      leads: allCreators,
-          });
-        } catch (error: any) {
-          console.error("Instagram search error:", error);
-          return NextResponse.json(
-            { error: error.message || "Instagram search failed" },
+      creators: allCreators,
+    });
+  } catch (error: any) {
+    console.error("Instagram search error:", error);
+    return NextResponse.json(
+      { error: error.message || "Instagram search failed" },
       { status: 500 }
     );
   }

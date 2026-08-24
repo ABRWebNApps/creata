@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
       total_unique_handles: uniqueAuthors.size,
       profiles_fetched: toFetch.length,
       credits_used: keywords.length + toFetch.length,
-      leads: creators,
+      creators,
     });
   } catch (error: any) {
     console.error("LinkedIn search error:", error);

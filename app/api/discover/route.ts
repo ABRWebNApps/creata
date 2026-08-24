@@ -60,12 +60,12 @@ export async function POST(request: NextRequest) {
     }
 
     const searchData = await searchResponse.json();
-        console.log(`✅ Found ${searchData.total_found} ${platform} leads`);
+    console.log(`✅ Found ${searchData.total_found} ${platform} creators`);
 
-        return NextResponse.json({
-          success: true,
-          total_found: searchData.total_found,
-          leads: searchData.leads,
+    return NextResponse.json({
+      success: true,
+      total_found: searchData.total_found,
+      creators: searchData.creators,
       platform: platform,
       keywords: keywordData.keywords,
       niche: keywordData.niche,
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: error.message || "Discovery failed",
-                total_found: 0,
-                leads: [],
+        total_found: 0,
+        creators: [],
       },
       { status: 500 }
     );

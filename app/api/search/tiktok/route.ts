@@ -278,15 +278,15 @@ export async function POST(request: NextRequest) {
     creators.sort((a, b) => b.score - a.score);
 
     return NextResponse.json({
-          success: true,
-          total_found: creators.length,
-          total_unique_handles: uniqueHandles.size,
-          profiles_fetched: toFetch.length,
-          credits_used: keywords.length + toFetch.length,
-          leads: creators,
-        });
-      } catch (error: any) {
-        console.error("TikTok search error:", error);
+      success: true,
+      total_found: creators.length,
+      total_unique_handles: uniqueHandles.size,
+      profiles_fetched: toFetch.length,
+      credits_used: keywords.length + toFetch.length,
+      creators,
+    });
+  } catch (error: any) {
+    console.error("TikTok search error:", error);
     return NextResponse.json(
       { error: error.message || "TikTok search failed" },
       { status: 500 }

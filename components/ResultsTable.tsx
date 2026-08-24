@@ -42,8 +42,8 @@ interface Lead {
 
 interface ResultsTableProps {
   data: {
-      leads?: Lead[];
-      total_found?: number;
+    creators?: Lead[];
+    total_found?: number;
   };
 }
 
@@ -54,8 +54,8 @@ interface Category {
 }
 
 export default function ResultsTable({ data }: ResultsTableProps) {
-  const creators = data?.leads || [];
-    const total_found = data?.total_found || creators.length;
+  const creators = data?.creators || [];
+      const total_found = data?.total_found || creators.length;
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set());
   const [savingAll, setSavingAll] = useState(false);

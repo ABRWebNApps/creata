@@ -29,7 +29,7 @@ export function suggestPainPoints(bio: string | null): string[] {
     points.push("Need help with customer acquisition and conversion optimization");
   if (text.includes("real esta") || text.includes("property") || text.includes("rental"))
     points.push("Finding and qualifying leads in a competitive real estate market");
-  if (text.includes("artist") || text.includes("creative") || text.includes("musician") || text.includes("design"))
+  if (text.includes("artist") || text.includes("creator") || text.includes("musician") || text.includes("design"))
     points.push("Difficulty monetizing creative work and building sustainable income");
   if (text.includes("marketing") || text.includes("advert") || text.includes("seo"))
     points.push("Need more effective marketing strategies with better ROI tracking");
