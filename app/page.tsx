@@ -106,7 +106,7 @@ export default function Home() {
               in seconds, not weeks.
             </h1>
             <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2 sm:px-0">
-              Creata turns any brief into a ranked list of real, active social media leads — filtered by platform, niche, and location. No spreadsheets, no manual scrolling, no guesswork.
+              Creata turns any idea into a list of real people who want what you're selling — filtered by platform, niche, and location. No spreadsheets. No manual scrolling. Just leads and customers, ready to find.
             </p>
           </div>
 
@@ -300,19 +300,20 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">The problem</p>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">The problem
+              </p>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">
-                The influencer economy is a $250B market — but finding the right leads is still broken.
+                Your next paying customer is scrolling social media right now. You just can't find them.
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-8">
-                Brands spend weeks scrolling hashtags, DMing for rates, and building spreadsheets. By the time they find someone, the opportunity is gone.
+                Real people looking for what you sell are posting every day on TikTok, Instagram, X, and LinkedIn. But finding them manually takes forever — and by the time you do, someone else already got to them.
               </p>
               <div className="space-y-4">
                 {[
-                  "Real-time discovery across TikTok, Instagram, X & LinkedIn in one query",
-                  "AI ranks each lead by relevance, engagement, and audience fit — not follower count",
-                  "Filter by location, platform, and niche without switching tabs",
-                  "Save leads instantly and revisit them from any device",
+                  "Search every major platform at once — TikTok, Instagram, X, LinkedIn, Facebook",
+                  "AI finds people who actually match what you offer — not just big follower counts",
+                  "Filter by country, platform, and niche so every lead is worth your time",
+                  "Save leads and come back anytime — your sales pipeline, built in seconds",
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />

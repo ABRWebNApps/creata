@@ -10,20 +10,20 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Creata - AI-Powered Lead Generation",
-  description: "Find and connect with high-quality social media leads for your B2B pipeline",
+  description: "Find real people on social media who actually want to buy what you sell — leads and customers, not just likes",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
     title: "Creata - AI-Powered Lead Generation",
-    description: "Find and connect with high-quality social media leads for your B2B pipeline",
+    description: "Find real people on social media who actually want to buy what you sell — leads and customers, not just likes",
     siteName: "Creata",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Creata - AI-Powered Lead Generation",
-    description: "Find and connect with high-quality social media leads for your B2B pipeline",
+    description: "Find real people on social media who actually want to buy what you sell — leads and customers, not just likes",
   },
 };
 

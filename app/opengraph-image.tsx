@@ -41,7 +41,7 @@ export default function Image() {
           Creata
         </h1>
         <p style={{ fontSize: 28, opacity: 0.85, marginTop: 8, maxWidth: 600, textAlign: "center" }}>
-          AI-Powered Social Media Lead Generation
+          AI-Powered Lead Generation — Find Customers, Not Just Clicks
         </p>
       </div>
     ),
