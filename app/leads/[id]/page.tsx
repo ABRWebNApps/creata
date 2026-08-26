@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { enrichBio } from "@/lib/bio-enrichment";
 
 type LeadProfile = {
   id: string;
@@ -325,10 +326,10 @@ export default function LeadProfilePage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading profile...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
         </div>
       </div>
     );
@@ -336,14 +337,14 @@ export default function LeadProfilePage({
 
   if (!lead) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center transition-colors duration-300">
         <div className="text-center px-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
             Lead not found
           </h2>
           <Link
             href="/leads"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+            className="text-blue-600 hover:text-blue-700 font-medium"
           >
             ← Back to My Leads
           </Link>
@@ -353,23 +354,32 @@ export default function LeadProfilePage({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg shadow-sm border-b border-white/20 dark:border-gray-700/50 sticky top-0 z-10 transition-colors duration-300">
+      <div className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200 sticky top-0 z-10 transition-colors duration-300">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <Link
-              href="/leads"
-              className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium hidden xs:inline">
-                Back to Leads
-              </span>
+                          href="/leads"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            // Navigate back in history if available, fallback to /leads
+                            if (window.history.length > 1) {
+                              router.back();
+                            } else {
+                              router.push("/leads");
+                            }
+                          }}
+                          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                          <ArrowLeft className="w-5 h-5 flex-shrink-0" />
+                          <span className="font-medium hidden xs:inline">
+                            Back
+                          </span>
             </Link>
             <button
               onClick={deleteLead}
-              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-all"
+              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
             >
               <Trash2 className="w-4 h-4" />
               <span className="hidden sm:inline">Delete</span>
@@ -381,7 +391,7 @@ export default function LeadProfilePage({
       {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Profile Card - Glassmorphism */}
-        <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 mb-6 overflow-x-hidden transition-colors duration-300">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-200 mb-6 overflow-x-hidden transition-colors duration-300">
           {/* Cover Background */}
           <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -394,7 +404,7 @@ export default function LeadProfilePage({
               <img
                 src={lead.avatar_url ?? undefined}
                 alt={lead.nickname}
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-2xl sm:rounded-3xl border-4 border-white dark:border-gray-800 shadow-xl object-cover mx-auto sm:mx-0"
+                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-2xl sm:rounded-3xl border-4 border-gray-200 shadow-xl object-cover mx-auto sm:mx-0"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                   e.currentTarget.nextElementSibling?.classList.remove(
@@ -402,22 +412,22 @@ export default function LeadProfilePage({
                   );
                 }}
               />
-              <div className="hidden w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-2xl sm:rounded-3xl border-4 border-white dark:border-gray-800 shadow-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl sm:text-4xl lg:text-5xl mx-auto sm:mx-0">
+              <div className="hidden w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-2xl sm:rounded-3xl border-4 border-gray-200 shadow-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl sm:text-4xl lg:text-5xl mx-auto sm:mx-0">
                 {lead.nickname.charAt(0)}
               </div>
 
               {/* Name & Handle */}
               <div className="flex-1 text-center sm:text-left mt-4 sm:mt-0 sm:mb-4 relative z-20">
-                <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 py-3 shadow-lg border border-white/50 dark:border-gray-700/50 mb-3 sm:bg-white/90 dark:sm:bg-gray-800/90 sm:backdrop-blur-md sm:rounded-xl sm:px-5 sm:py-4 sm:shadow-xl transition-colors duration-300">
+                <div className="bg-white rounded-xl sm:rounded-2xl px-4 py-3 shadow-sm border border-gray-200 mb-3 sm:px-5 sm:py-4 transition-colors duration-300">
                   <div className="flex items-center justify-center sm:justify-start space-x-2 mb-2 flex-wrap gap-2">
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white drop-shadow-md">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 drop-shadow-md">
                       {lead.nickname}
                     </h1>
                     {lead.verified && (
-                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-blue-500 dark:text-blue-400 fill-current drop-shadow-md flex-shrink-0" />
+                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-blue-500 fill-current drop-shadow-md flex-shrink-0" />
                     )}
                   </div>
-                  <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 mb-0 drop-shadow-sm font-medium">
+                  <p className="text-base sm:text-lg text-gray-700 mb-0 drop-shadow-sm font-medium">
                     @{lead.handle}
                   </p>
                 </div>
@@ -429,7 +439,7 @@ export default function LeadProfilePage({
                     className={`flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold transition-all shadow-lg text-sm sm:text-base ${
                       lead.is_tracked
                         ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-xl"
-                        : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        : "bg-white text-gray-700 hover:bg-gray-50"
                     }`}
                   >
                     {lead.is_tracked ? (
@@ -480,7 +490,7 @@ export default function LeadProfilePage({
                       href={lead.bio_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-lg text-sm sm:text-base"
+                      className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 bg-white text-gray-700 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-lg text-sm sm:text-base"
                     >
                       <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="hidden sm:inline">Visit Website</span>
@@ -491,30 +501,69 @@ export default function LeadProfilePage({
               </div>
             </div>
 
-            {/* Bio */}
-            {lead.bio && (
-              <div className="mt-4 sm:mt-6 p-4 sm:p-6 bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-xl sm:rounded-2xl transition-colors duration-300">
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm sm:text-base">
-                  {lead.bio}
-                </p>
-              </div>
-            )}
+            {/* Bio — enriched with structured analysis */}
+                        {lead.bio && (() => {
+                          const enriched = enrichBio(lead.bio);
+                          return (
+                            <div className="mt-4 sm:mt-6">
+                              {/* Professional Summary */}
+                              {enriched.summary && (
+                                <div className="mb-3 p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl border border-blue-100">
+                                  <p className="text-sm sm:text-base text-gray-800 font-medium leading-relaxed">
+                                    {enriched.summary}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Structured Bio Tags */}
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                {enriched.role && (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-medium">
+                                    {enriched.role}
+                                  </span>
+                                )}
+                                {enriched.niche && (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium">
+                                    {enriched.niche}
+                                  </span>
+                                )}
+                                {enriched.content_focus && (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-medium">
+                                    📝 {enriched.content_focus.slice(0, 35)}...
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Original Bio (collapsed) */}
+                              <details className="group">
+                                <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600 transition-colors select-none mb-1">
+                                  Full bio <span className="group-open:hidden">▼</span><span className="hidden group-open:inline">▲</span>
+                                </summary>
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                  <p className="text-gray-700 leading-relaxed text-sm sm:text-base whitespace-pre-wrap">
+                                    {lead.bio}
+                                  </p>
+                                </div>
+                              </details>
+                            </div>
+                          );
+                        })()}
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Followers */}
-          <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+          <div className="bg-white backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 sm:p-3 bg-blue-50 rounded-lg sm:rounded-xl">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">
                   Followers
                 </p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
                   {lead.followers.toLocaleString()}
                 </p>
               </div>
@@ -522,16 +571,16 @@ export default function LeadProfilePage({
           </div>
 
           {/* Engagement Rate */}
-          <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+          <div className="bg-white backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg sm:rounded-xl">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-600 dark:text-green-400" />
+              <div className="p-2 sm:p-3 bg-emerald-50 rounded-lg sm:rounded-xl">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-emerald-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">
                   Engagement
                 </p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600 dark:text-green-400">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-emerald-600">
                   {lead.engagement_rate}%
                 </p>
               </div>
@@ -539,16 +588,16 @@ export default function LeadProfilePage({
           </div>
 
           {/* Platform */}
-          <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+          <div className="bg-white backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg sm:rounded-xl">
-                <Video className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 sm:p-3 bg-purple-50 rounded-lg sm:rounded-xl">
+                <Video className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">
                   Platform
                 </p>
-                <p className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white capitalize truncate">
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 capitalize truncate">
                   {lead.platform}
                 </p>
               </div>
@@ -556,16 +605,16 @@ export default function LeadProfilePage({
           </div>
 
           {/* Saved Date */}
-          <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all">
+          <div className="bg-white backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-              <div className="p-2 sm:p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg sm:rounded-xl">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-indigo-600 dark:text-indigo-400" />
+              <div className="p-2 sm:p-3 bg-indigo-50 rounded-lg sm:rounded-xl">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-indigo-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">
                   Saved
                 </p>
-                <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white">
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">
                   {new Date(lead.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -578,8 +627,8 @@ export default function LeadProfilePage({
 
                 {/* Pain Points — structured analysis of this lead's needs */}
                                 {(lead.pain_points != null && lead.pain_points.length > 0 || lead.bio) && (
-                                  <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg mb-4 sm:mb-6 transition-colors duration-300">
-                                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center space-x-2">
+                                  <div className="bg-white/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg mb-4 sm:mb-6 transition-colors duration-300">
+                                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center space-x-2">
                                       <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
                                       <span>Pain Point Analysis</span>
                                     </h2>
@@ -588,23 +637,23 @@ export default function LeadProfilePage({
                                         ? lead.pain_points.map(p => typeof p === 'string' ? { text: p, severity: 'medium' as const, category: 'General', evidence: 'From database', solution: 'Custom outreach based on identified pain point' } : p)
                                         : analyzePainPoints(lead.bio)
                                       ).map((point: any, i: number) => (
-                                        <div key={i} className="bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl overflow-hidden border border-amber-100 dark:border-amber-900/20">
+                                        <div key={i} className="bg-white/60 rounded-lg sm:rounded-xl overflow-hidden border border-amber-100">
                                           {/* Header with severity badge */}
-                                          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 bg-amber-50/50 dark:bg-amber-900/10 border-b border-amber-100/50 dark:border-amber-900/20">
+                                          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 bg-amber-50/50 border-b border-amber-100/50">
                                             <div className="flex items-center space-x-2">
-                                              <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold">
+                                              <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">
                                                 {i + 1}
                                               </span>
-                                              <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                              <span className="text-xs sm:text-sm font-semibold text-gray-800">
                                                 {point.text}
                                               </span>
                                             </div>
                                             <span className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                              point.severity === 'high'
-                                                ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                                                : point.severity === 'medium'
-                                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                                                : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                                                                          point.severity === 'high'
+                                                                                            ? 'bg-red-100 text-red-600'
+                                                                                            : point.severity === 'medium'
+                                                                                            ? 'bg-amber-100 text-amber-700'
+                                                                                            : 'bg-emerald-50 text-emerald-600'
                                             }`}>
                                               {point.severity === 'high' ? 'HIGH' : point.severity === 'medium' ? 'MEDIUM' : 'LOW'}
                                             </span>
@@ -615,8 +664,8 @@ export default function LeadProfilePage({
                                             {/* Category tag */}
                                             {point.category && (
                                               <div className="flex items-center space-x-1.5">
-                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category:</span>
-                                                <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
+                                                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Category:</span>
+                                                <span className="text-xs font-medium bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                                                   {point.category}
                                                 </span>
                                               </div>
@@ -625,8 +674,8 @@ export default function LeadProfilePage({
                                             {/* Evidence */}
                                             {point.evidence && (
                                               <div className="flex items-start space-x-1.5">
-                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0 mt-0.5">Evidence:</span>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed">
+                                                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider shrink-0 mt-0.5">Evidence:</span>
+                                                <p className="text-xs text-gray-500 italic leading-relaxed">
                                                   "{point.evidence}"
                                                 </p>
                                               </div>
@@ -635,8 +684,8 @@ export default function LeadProfilePage({
                                             {/* Solution Angle */}
                                             {point.solution && (
                                               <div className="flex items-start space-x-1.5">
-                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0 mt-0.5">Angle:</span>
-                                                <p className="text-xs text-emerald-600 dark:text-emerald-400 leading-relaxed">
+                                                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider shrink-0 mt-0.5">Angle:</span>
+                                                <p className="text-xs text-emerald-600 leading-relaxed">
                                                   {point.solution}
                                                 </p>
                                               </div>
@@ -649,34 +698,34 @@ export default function LeadProfilePage({
                                 )}
 
                 {/* Contact Information */}
-        <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg mb-4 sm:mb-6 transition-colors duration-300">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center space-x-2">
-            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg mb-4 sm:mb-6 transition-colors duration-300">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center space-x-2">
+            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             <span>Contact Information</span>
           </h2>
 
           <div className="space-y-3 sm:space-y-4">
             {/* Email */}
-            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-              <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+              <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
                   Email
                 </p>
                 {lead.email ? (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1 sm:gap-0">
-                    <p className="text-sm sm:text-base text-gray-900 dark:text-white break-all">
+                    <p className="text-sm sm:text-base text-gray-900 break-all">
                       {lead.email}
                     </p>
                     <a
                       href={`mailto:${lead.email}`}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium whitespace-nowrap text-xs sm:text-sm"
+                      className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap text-xs sm:text-sm"
                     >
                       Send →
                     </a>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                  <p className="text-sm text-gray-400 italic">
                     No email available
                   </p>
                 )}
@@ -684,28 +733,28 @@ export default function LeadProfilePage({
             </div>
 
             {/* Instagram */}
-            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-              <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+              <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
                   Instagram
                 </p>
                 {lead.instagram_handle ? (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1 sm:gap-0">
-                    <p className="text-sm sm:text-base text-gray-900 dark:text-white">
+                    <p className="text-sm sm:text-base text-gray-900">
                       @{lead.instagram_handle}
                     </p>
                     <a
                       href={`https://instagram.com/${lead.instagram_handle}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium whitespace-nowrap text-xs sm:text-sm"
+                      className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap text-xs sm:text-sm"
                     >
                       Open →
                     </a>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                  <p className="text-sm text-gray-400 italic">
                     No Instagram linked
                   </p>
                 )}
@@ -713,28 +762,28 @@ export default function LeadProfilePage({
             </div>
 
             {/* Bio Link */}
-            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-              <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+              <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
                   Website
                 </p>
                 {lead.bio_link ? (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1 sm:gap-0">
-                    <p className="text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                    <p className="text-sm sm:text-base text-gray-900 truncate">
                       {lead.bio_link}
                     </p>
                     <a
                       href={lead.bio_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium whitespace-nowrap text-xs sm:text-sm"
+                      className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap text-xs sm:text-sm"
                     >
                       Visit →
                     </a>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                  <p className="text-sm text-gray-400 italic">
                     No website linked
                   </p>
                 )}
@@ -742,21 +791,21 @@ export default function LeadProfilePage({
             </div>
 
             {/* Profile Link */}
-                        <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-                          <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+                          <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
                               {lead.platform === "instagram" ? "Instagram" : lead.platform === "x" ? "X" : lead.platform === "facebook" ? "Facebook" : lead.platform === "linkedin" ? "LinkedIn" : "TikTok"} Profile
                             </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1 sm:gap-0">
-                  <p className="text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                  <p className="text-sm sm:text-base text-gray-900 truncate">
                     {lead.profile_url}
                   </p>
                   <a
                     href={lead.profile_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium whitespace-nowrap text-xs sm:text-sm"
+                    className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap text-xs sm:text-sm"
                   >
                     Open →
                   </a>
@@ -765,16 +814,16 @@ export default function LeadProfilePage({
                         </div>
 
                         {/* Category */}
-                        <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl transition-colors duration-300">
-                          <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start space-x-2 sm:space-x-3 p-3 sm:p-4 bg-white/60 rounded-lg sm:rounded-xl transition-colors duration-300">
+                          <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">
                               Category
                             </p>
                             <div className="relative">
                               <button
                                 onClick={() => setShowCategoryPicker(!showCategoryPicker)}
-                                className="flex items-center justify-between w-full text-left text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 hover:border-blue-400 transition-colors"
+                                className="flex items-center justify-between w-full text-left text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-blue-400 transition-colors"
                               >
                                 <span>
                                   {lead.category_id
@@ -784,11 +833,11 @@ export default function LeadProfilePage({
                                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
                               </button>
                               {showCategoryPicker && (
-                                <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+                                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                                   <button
                                     onClick={() => changeCategory(null)}
-                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                                      !lead.category_id ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-medium" : "text-gray-700 dark:text-gray-300"
+                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                      !lead.category_id ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"
                                     }`}
                                   >
                                     No category
@@ -797,8 +846,8 @@ export default function LeadProfilePage({
                                     <button
                                       key={cat.id}
                                       onClick={() => changeCategory(cat.id)}
-                                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                                        lead.category_id === cat.id ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-medium" : "text-gray-700 dark:text-gray-300"
+                                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                        lead.category_id === cat.id ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"
                                       }`}
                                     >
                                       {cat.name}
@@ -813,20 +862,20 @@ export default function LeadProfilePage({
                     </div>
 
                     {/* Notes Section */}
-        <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 dark:border-gray-700/50 shadow-lg transition-colors duration-300">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        <div className="bg-white/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg transition-colors duration-300">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
             Notes & Outreach
           </h2>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add notes about this lead (e.g., outreach status, campaign ideas, follow-up dates...)"
-            className="w-full p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-h-[120px] sm:min-h-[150px] resize-y bg-white dark:bg-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-300 text-sm sm:text-base"
+            className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] sm:min-h-[150px] resize-y bg-white text-black placeholder-gray-400 transition-colors duration-300 text-sm sm:text-base"
           />
           <button
             onClick={saveNotes}
             disabled={savingNotes}
-            className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-600 text-white rounded-lg sm:rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto"
+            className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg sm:rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto"
           >
             {savingNotes ? "Saving..." : "Save Notes"}
           </button>

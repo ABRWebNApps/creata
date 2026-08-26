@@ -35,10 +35,10 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-foreground rounded-2xl mb-4 mx-auto">
-            <Sparkles className="w-7 h-7 text-background" />
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 mx-auto">
+            <Sparkles className="w-7 h-7 text-white" />
           </div>
           <CardTitle className="text-2xl">Forgot password?</CardTitle>
           <CardDescription>
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {sent ? (
             <div className="text-center py-6">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+              <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
               <p className="font-semibold mb-1">Check your email</p>
               <p className="text-sm text-muted-foreground">
                 We sent a password reset link to <strong>{email}</strong>

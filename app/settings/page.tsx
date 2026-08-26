@@ -120,7 +120,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {message && (
-                  <p className={`text-sm ${message.includes("Error") ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+                  <p className={`text-sm ${message.includes("Error") ? "text-destructive" : "text-emerald-600"}`}>
                     {message}
                   </p>
                 )}
@@ -162,7 +162,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {passwordMessage && (
-                  <p className={`text-sm ${passwordMessage.includes("Error") ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+                  <p className={`text-sm ${passwordMessage.includes("Error") ? "text-destructive" : "text-emerald-600"}`}>
                     {passwordMessage}
                   </p>
                 )}

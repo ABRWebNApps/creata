@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
@@ -158,8 +158,8 @@ export function SubscriptionProvider({
   );
   const [loading, setLoading] = useState(true);
 
-  const loadSubscription = useCallback(async () => {
-    setLoading(true);
+  const loadSubscription = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
 
     try {
       // 1. If no user — fall back to cached or free
@@ -237,10 +237,22 @@ export function SubscriptionProvider({
     setLoading(false);
   }, [user]);
 
-  // Load on mount and whenever user changes
+  // Initial mount — show loading indicator
   useEffect(() => {
-    loadSubscription();
-  }, [loadSubscription]);
+    loadSubscription(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // User changes — background refresh, no loading indicator.
+  // Guards against the mount double-run: only fires when user actually changes.
+  const prevUserId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const id = user?.id;
+    if (prevUserId.current !== id) {
+      prevUserId.current = id;
+      loadSubscription(false);
+    }
+  }, [user, loadSubscription]);
 
   const refreshSubscription = useCallback(async () => {
     await loadSubscription();

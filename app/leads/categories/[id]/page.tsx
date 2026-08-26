@@ -385,19 +385,19 @@ export default function CategoryDetailPage({
                     (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove("hidden");
                   }}
                 />
-                <div className="hidden w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                <div className="hidden w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
                   {lead.nickname?.charAt(0) || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                     <h4 className="font-semibold truncate text-sm max-w-[140px] sm:max-w-[200px]">{lead.nickname}</h4>
-                    {lead.verified && <span className="text-blue-400 shrink-0 text-xs">✓</span>}
+                    {lead.verified && <span className="text-blue-600 shrink-0 text-xs">✓</span>}
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                      lead.platform === "tiktok" ? "bg-blue-900/30 text-blue-400" :
-                      lead.platform === "x" ? "bg-gray-700 text-white" :
-                      lead.platform === "instagram" ? "bg-pink-900/30 text-pink-400" :
-                      lead.platform === "linkedin" ? "bg-blue-900/30 text-blue-400" :
-                      lead.platform === "facebook" ? "bg-blue-900/30 text-blue-400" :
+                      lead.platform === "tiktok" ? "bg-blue-50 text-blue-600" :
+                      lead.platform === "x" ? "bg-gray-100 text-gray-700" :
+                      lead.platform === "instagram" ? "bg-pink-50 text-pink-600" :
+                      lead.platform === "linkedin" ? "bg-blue-50 text-blue-600" :
+                      lead.platform === "facebook" ? "bg-blue-50 text-blue-600" :
                       "bg-muted text-muted-foreground"
                     }`}>
                       {lead.platform === "tiktok" ? "TT" : lead.platform === "x" ? "X" : lead.platform === "instagram" ? "IG" : lead.platform === "linkedin" ? "LN" : lead.platform === "facebook" ? "FB" : lead.platform}
@@ -414,14 +414,14 @@ export default function CategoryDetailPage({
                 </div>
                 <div className="bg-muted rounded-lg p-2.5">
                   <p className="text-[10px] text-muted-foreground">Engagement</p>
-                  <p className="font-semibold text-sm text-green-400">{lead.engagement_rate}%</p>
+                  <p className="font-semibold text-sm text-emerald-600">{lead.engagement_rate}%</p>
                 </div>
               </div>
 
               {lead.email && (
-                <div className="flex items-center gap-1.5 text-xs bg-green-900/20 p-2 rounded-lg mb-3">
-                  <Mail className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                  <span className="truncate text-green-400">{lead.email}</span>
+                <div className="flex items-center gap-1.5 text-xs bg-blue-50 p-2 rounded-lg mb-3">
+                  <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate text-blue-600">{lead.email}</span>
                 </div>
               )}
 
@@ -429,14 +429,14 @@ export default function CategoryDetailPage({
                 <button
                   onClick={() => toggleTracked(lead)}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                    lead.is_tracked ? "bg-green-900/30 text-green-400" : "bg-muted text-muted-foreground"
+                    lead.is_tracked ? "bg-blue-50 text-blue-600" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {lead.is_tracked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
                   {lead.is_tracked ? "Engaged" : "Engage"}
                 </button>
                 {lead.email && (
-                  <a href={`mailto:${lead.email}`} className="p-2 bg-green-900/30 text-green-400 rounded-lg hover:bg-green-900/50">
+                  <a href={`mailto:${lead.email}`} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
                     <Mail className="w-3.5 h-3.5" />
                   </a>
                 )}
@@ -484,13 +484,13 @@ export default function CategoryDetailPage({
                             (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove("hidden");
                           }}
                         />
-                        <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                        <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
                           {lead.nickname?.charAt(0) || "?"}
                         </div>
                         <div>
                           <div className="font-medium flex items-center gap-1.5">
                             <span>{lead.nickname}</span>
-                            {lead.verified && <span className="text-blue-400 text-xs">✓</span>}
+                            {lead.verified && <span className="text-blue-600 text-xs">✓</span>}
                           </div>
                           <div className="text-sm text-muted-foreground">@{lead.handle}</div>
                         </div>
@@ -498,17 +498,17 @@ export default function CategoryDetailPage({
                     </td>
                     <td className="px-6 py-4 font-medium">{lead.followers?.toLocaleString() || 0}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-400">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                         {lead.engagement_rate}%
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        lead.platform === "linkedin" ? "bg-blue-900/30 text-blue-400" :
-                        lead.platform === "tiktok" ? "bg-blue-900/30 text-blue-400" :
-                        lead.platform === "x" ? "bg-gray-700 text-white" :
-                        lead.platform === "instagram" ? "bg-pink-900/30 text-pink-400" :
-                        lead.platform === "facebook" ? "bg-blue-900/30 text-blue-400" :
+                        lead.platform === "linkedin" ? "bg-blue-50 text-blue-600" :
+                        lead.platform === "tiktok" ? "bg-blue-50 text-blue-600" :
+                        lead.platform === "x" ? "bg-gray-100 text-gray-700" :
+                        lead.platform === "instagram" ? "bg-pink-50 text-pink-600" :
+                        lead.platform === "facebook" ? "bg-blue-50 text-blue-600" :
                         "bg-muted text-muted-foreground"
                       }`}>
                         {lead.platform === "linkedin" ? "LinkedIn" :
@@ -522,7 +522,7 @@ export default function CategoryDetailPage({
                     <td className="px-6 py-4">
                       {lead.email ? (
                         <div className="flex items-center gap-1.5 text-sm">
-                          <Mail className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                          <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           <span className="text-muted-foreground truncate max-w-[180px]">{lead.email}</span>
                         </div>
                       ) : (
@@ -534,7 +534,7 @@ export default function CategoryDetailPage({
                         onClick={() => toggleTracked(lead)}
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                           lead.is_tracked
-                            ? "bg-green-900/30 text-green-400"
+                            ? "bg-blue-50 text-blue-600"
                             : "bg-muted text-muted-foreground hover:bg-muted/80"
                         }`}
                       >
@@ -545,7 +545,7 @@ export default function CategoryDetailPage({
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
                         {lead.email && (
-                          <a href={`mailto:${lead.email}`} className="p-1.5 bg-green-900/30 text-green-400 rounded-lg hover:bg-green-900/50">
+                          <a href={`mailto:${lead.email}`} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
                             <Mail className="w-3.5 h-3.5" />
                           </a>
                         )}

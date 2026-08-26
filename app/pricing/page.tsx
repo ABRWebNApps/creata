@@ -129,8 +129,8 @@ function PricingContent() {
   // ── Loading state ────────────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
-        <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-gray-300 dark:border-gray-700 border-t-black dark:border-t-white" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-black" />
       </div>
     );
   }
@@ -140,11 +140,11 @@ function PricingContent() {
 
   // ── Feature icon mapping ─────────────────────────────────────────────────
   const featureIcons: Record<string, React.ReactNode> = {
-    "one free rip": <Search className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />,
-    "save & export leads": <Download className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />,
-    "lead extracting": <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />,
-    "email finder": <Mail className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />,
-    "enrich lead": <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />,
+    "one free rip": <Search className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "save & export leads": <Download className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
+    "lead extracting": <Zap className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "email finder": <Mail className="w-4 h-4 text-purple-600 flex-shrink-0" />,
+    "enrich lead": <Users className="w-4 h-4 text-indigo-600 flex-shrink-0" />,
   };
 
   // ── Plan card config ─────────────────────────────────────────────────────
@@ -196,13 +196,13 @@ function PricingContent() {
       <main className="min-h-screen bg-background text-foreground">
         {/* ── Pricing Hero ──────────────────────────────────────────────────────── */}
       <section className="relative pt-20 pb-12 sm:pt-28 sm:pb-16">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 dark:from-gray-900/50 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto px-6 relative text-center">
           {/* Bag secured banner */}
           {verifiedPlan && (
-            <div className="inline-flex items-center gap-2 px-5 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-2xl mb-8 animate-slide-up">
-              <Crown className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <span className="text-green-700 dark:text-green-300 font-semibold text-sm">
+            <div className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl mb-8 animate-slide-up">
+              <Crown className="w-5 h-5 text-emerald-600" />
+              <span className="text-emerald-700 font-semibold text-sm">
                 Bag secured! 🎉 {verifiedPlan === "agency" ? "The Plug" : verifiedPlan === "basic" ? "The Hustler" : "Free"} plan is live — go run those searches!
               </span>
             </div>
@@ -210,9 +210,9 @@ function PricingContent() {
 
           {/* Verifying spinner */}
           {verifying && (
-            <div className="inline-flex items-center gap-3 px-5 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-2xl mb-8">
-              <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent" />
-              <span className="text-blue-700 dark:text-blue-300 font-medium text-sm">
+            <div className="inline-flex items-center gap-3 px-5 py-3 bg-blue-50 border border-blue-200 rounded-2xl mb-8">
+              <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
+              <span className="text-blue-700 font-medium text-sm">
                 Verifying your payment... hold tight
               </span>
             </div>
@@ -221,7 +221,7 @@ function PricingContent() {
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
             Pick your plan
           </h1>
-          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg text-gray-500 max-w-xl mx-auto leading-relaxed">
             First one&apos;s on us — one free rip, no cap. Upgrade when you&apos;re ready to go viral.
           </p>
         </div>
@@ -240,10 +240,10 @@ function PricingContent() {
                 key={plan.id}
                 className={`relative flex flex-col rounded-2xl border transition-all duration-300 ${
                   isCurrent
-                    ? "border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/30 dark:ring-blue-500/30 bg-blue-50/50 dark:bg-blue-950/30"
+                    ? "border-blue-400 ring-2 ring-blue-400/30 bg-blue-50/50"
                     : plan.popular
-                    ? "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-lg"
-                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md"
+                    ? "border-gray-300 bg-white hover:border-gray-400 hover:shadow-lg"
+                    : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
                 }`}
               >
                 {/* Popular badge */}
@@ -259,7 +259,7 @@ function PricingContent() {
                 {/* Current plan badge */}
                 {isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 dark:bg-blue-500 text-white text-xs font-semibold rounded-full shadow-md">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full shadow-md">
                       <CheckCircle className="w-3 h-3" />
                       Active plan
                     </span>
@@ -273,7 +273,7 @@ function PricingContent() {
                     <span className="text-3xl">{plan.emoji}</span>
                     <div>
                       <h3 className="text-xl font-bold tracking-tight">{plan.name}</h3>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      <p className="text-xs text-gray-400 mt-0.5">
                         {plan.tagline}
                       </p>
                     </div>
@@ -286,15 +286,15 @@ function PricingContent() {
                     ) : (
                       <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-bold">${plan.price}</span>
-                        <span className="text-sm text-gray-400 dark:text-gray-500">/mo</span>
+                        <span className="text-sm text-gray-400">/mo</span>
                       </div>
                     )}
                   </div>
 
                   {/* Runs count */}
-                  <div className="flex items-center gap-2 mb-6 py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <Zap className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center gap-2 mb-6 py-3 px-4 bg-gray-50 rounded-xl">
+                    <Zap className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-700">
                       {plan.runs} {plan.runs === 1 ? "search" : "searches"} / month
                     </span>
                   </div>
@@ -304,9 +304,9 @@ function PricingContent() {
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-3">
                         {featureIcons[feature] || (
-                          <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         )}
-                        <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed capitalize">
+                        <span className="text-sm text-gray-600 leading-relaxed capitalize">
                           {feature}
                         </span>
                       </li>
@@ -315,14 +315,14 @@ function PricingContent() {
 
                   {/* CTA Button */}
                   {isCurrent ? (
-                    <div className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 cursor-default">
+                    <div className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-blue-100 text-blue-700 cursor-default">
                       <CheckCircle className="w-4 h-4 inline mr-1.5 -mt-0.5" />
                       W — you&apos;re on this plan
                     </div>
                   ) : isFree ? (
                     <Link
                       href="/"
-                      className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity inline-block"
+                      className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-black text-white hover:opacity-90 transition-opacity inline-block"
                     >
                       Start your free rip
                       <ArrowRight className="w-4 h-4 inline ml-1.5 -mt-0.5" />
@@ -331,11 +331,11 @@ function PricingContent() {
                     <button
                       onClick={() => subscribe(plan.id)}
                       disabled={subscribeLoading === plan.id}
-                      className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-black text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {subscribeLoading === plan.id ? (
                         <span className="inline-flex items-center gap-2">
-                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white dark:border-black border-t-transparent" />
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                           Processing...
                         </span>
                       ) : (
@@ -354,21 +354,21 @@ function PricingContent() {
       </section>
 
       {/* ── Bottom trust signal ─────────────────────────────────────────────── */}
-      <section className="border-t border-gray-100 dark:border-gray-800 py-16 bg-gray-50/50 dark:bg-gray-900/30">
+      <section className="border-t border-gray-100 py-16 bg-gray-50/50">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <Shield className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <Shield className="w-10 h-10 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No stress, no lock-in</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
             Paystack handles everything securely. Cancel anytime — your credits stay until you use &apos;em. If something breaks, we got you.
           </p>
         </div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 dark:border-gray-800 py-8">
+      <footer className="border-t border-gray-100 py-8">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-sm text-gray-400 dark:text-gray-600">Creata — AI-native lead generation</p>
-          <p className="text-sm text-gray-400 dark:text-gray-600">
+          <p className="text-sm text-gray-400">Creata — AI-native lead generation</p>
+          <p className="text-sm text-gray-400">
             &copy; {new Date().getFullYear()}
           </p>
         </div>
@@ -379,7 +379,7 @@ function PricingContent() {
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center"><div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-gray-300 dark:border-gray-700 border-t-black dark:border-t-white" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-black" /></div>}>
       <PricingContent />
     </Suspense>
   );

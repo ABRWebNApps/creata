@@ -217,7 +217,7 @@ export default function UncategorizedPage() {
                   className="w-12 h-12 rounded-full object-cover shrink-0"
                   onError={(e) => { e.currentTarget.style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove("hidden"); }}
                 />
-                <div className="hidden w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                <div className="hidden w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
                   {lead.nickname?.charAt(0) || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -232,15 +232,15 @@ export default function UncategorizedPage() {
                 </div>
                 <div className="bg-muted rounded-lg p-2.5">
                   <p className="text-[10px] text-muted-foreground">Engagement</p>
-                  <p className="font-semibold text-sm text-green-400">{lead.engagement_rate}%</p>
+                  <p className="font-semibold text-sm text-emerald-600">{lead.engagement_rate}%</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => toggleTracked(lead)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium ${lead.is_tracked ? "bg-green-900/30 text-green-400" : "bg-muted text-muted-foreground"}`}>
+                <button onClick={() => toggleTracked(lead)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium ${lead.is_tracked ? "bg-blue-50 text-blue-600" : "bg-muted text-muted-foreground"}`}>
                   {lead.is_tracked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
                   {lead.is_tracked ? "Engaged" : "Engage"}
                 </button>
-                {lead.email && <a href={`mailto:${lead.email}`} className="p-2 bg-green-900/30 text-green-400 rounded-lg shrink-0"><Mail className="w-3.5 h-3.5" /></a>}
+                {lead.email && <a href={`mailto:${lead.email}`} className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Mail className="w-3.5 h-3.5" /></a>}
                 <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-primary/10 text-primary rounded-lg shrink-0"><MessageCircle className="w-3.5 h-3.5" /></a>
                 <button onClick={() => deleteLead(lead.id)} className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
@@ -267,7 +267,7 @@ export default function UncategorizedPage() {
                     <td className="px-6 py-4">
                       <Link href={`/leads/${lead.id}`} className="flex items-center gap-3">
                         <img src={lead.avatar_url ?? undefined} alt={lead.nickname ?? ""} className="w-10 h-10 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove("hidden"); }} />
-                        <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold text-sm">{lead.nickname?.charAt(0) || "?"}</div>
+                        <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">{lead.nickname?.charAt(0) || "?"}</div>
                         <div>
                           <div className="font-medium">{lead.nickname}</div>
                           <div className="text-sm text-muted-foreground">@{lead.handle}</div>
@@ -276,15 +276,15 @@ export default function UncategorizedPage() {
                     </td>
                     <td className="px-6 py-4 font-medium">{lead.followers?.toLocaleString() || 0}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-400">{lead.engagement_rate}%</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">{lead.engagement_rate}%</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        lead.platform === "linkedin" ? "bg-blue-900/30 text-blue-400" :
-                        lead.platform === "tiktok" ? "bg-blue-900/30 text-blue-400" :
-                        lead.platform === "x" ? "bg-gray-700 text-white" :
-                        lead.platform === "instagram" ? "bg-pink-900/30 text-pink-400" :
-                        lead.platform === "facebook" ? "bg-blue-900/30 text-blue-400" :
+                        lead.platform === "linkedin" ? "bg-blue-50 text-blue-700" :
+                        lead.platform === "tiktok" ? "bg-blue-50 text-blue-700" :
+                        lead.platform === "x" ? "bg-gray-100 text-gray-700" :
+                        lead.platform === "instagram" ? "bg-pink-50 text-pink-700" :
+                        lead.platform === "facebook" ? "bg-blue-50 text-blue-700" :
                         "bg-muted text-muted-foreground"
                       }`}>
                         {lead.platform === "linkedin" ? "LinkedIn" :
@@ -297,10 +297,10 @@ export default function UncategorizedPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => toggleTracked(lead)} className={`p-1.5 rounded-lg ${lead.is_tracked ? "bg-green-900/30 text-green-400" : "bg-muted text-muted-foreground"}`}>
+                        <button onClick={() => toggleTracked(lead)} className={`p-1.5 rounded-lg ${lead.is_tracked ? "bg-blue-50 text-blue-600" : "bg-muted text-muted-foreground"}`}>
                           {lead.is_tracked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
                         </button>
-                        {lead.email && <a href={`mailto:${lead.email}`} className="p-1.5 bg-green-900/30 text-green-400 rounded-lg"><Mail className="w-3.5 h-3.5" /></a>}
+                        {lead.email && <a href={`mailto:${lead.email}`} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Mail className="w-3.5 h-3.5" /></a>}
                         <a href={lead.profile_url} target="_blank" rel="noopener noreferrer" className="p-1.5 bg-primary/10 text-primary rounded-lg"><MessageCircle className="w-3.5 h-3.5" /></a>
                         <button onClick={() => deleteLead(lead.id)} className="p-1.5 bg-red-900/30 text-red-400 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>

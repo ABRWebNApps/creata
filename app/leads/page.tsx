@@ -420,14 +420,14 @@ export default function MyLeadsPage() {
                                   (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove("hidden");
                                 }}
                               />
-                              <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              <div className="hidden w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                                 {lead.nickname?.charAt(0) || "?"}
                               </div>
                               <div>
                                 <div className="font-medium flex items-center gap-1.5">
                                   <span>{lead.nickname}</span>
                                   {lead.verified && (
-                                    <span className="text-blue-400 text-xs">✓</span>
+                                    <span className="text-blue-600 text-xs">✓</span>
                                   )}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
@@ -445,9 +445,9 @@ export default function MyLeadsPage() {
                             {lead.followers?.toLocaleString() || 0}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
-                              {lead.engagement_rate}%
-                            </span>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                          {lead.engagement_rate}%
+                                                        </span>
                           </td>
                           <td className="px-6 py-4 text-sm capitalize">{lead.platform}</td>
                           <td className="px-6 py-4">
@@ -456,7 +456,7 @@ export default function MyLeadsPage() {
                                 <a
                                   href={`mailto:${lead.email}`}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-all"
+                                  className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all"
                                   title="Send Email"
                                 >
                                   <Mail className="w-3.5 h-3.5" />
