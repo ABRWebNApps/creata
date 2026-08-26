@@ -47,11 +47,13 @@ type LeadProfile = {
   category_id: string | null;
   created_at: string;
   // Enrichment JSONB fields (saved on lead row)
-  enriched_emails?: Array<{ email: string; confidence: number; source_url: string | null }>;
-  enriched_phones?: Array<{ phone: string; confidence: number }>;
-  enriched_aliases?: Array<{ platform: string; profile_url: string }>;
-  enriched_at?: string | null;
-};
+    enriched_emails?: Array<{ email: string; confidence: number; source_url: string | null }>;
+    enriched_phones?: Array<{ phone: string; confidence: number }>;
+    enriched_aliases?: Array<{ platform: string; profile_url: string }>;
+    enriched_at?: string | null;
+    // CRM-style notes
+    lead_notes?: Array<{ id: string; subject: string; description: string; created_at: string; updated_at?: string }>;
+  };
 
 type PainPoint = {
   text: string;
@@ -207,8 +209,13 @@ export default function LeadProfilePage({
   const resolvedParams = use(params);
   const [lead, setLead] = useState<LeadProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState("");
-  const [savingNotes, setSavingNotes] = useState(false);
+  const [notes, setNotes] = useState<string>("");
+    const [savingNotes, setSavingNotes] = useState(false);
+    const [crmNotes, setCrmNotes] = useState<Array<{ id: string; subject: string; description: string; created_at: string; updated_at?: string }>>([]);
+  const [noteSubject, setNoteSubject] = useState("");
+  const [noteDescription, setNoteDescription] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [showNoteForm, setShowNoteForm] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     // ── Enrichment state ──
@@ -242,7 +249,8 @@ export default function LeadProfilePage({
       if (!result.success) throw new Error(result.error);
 
       setLead(result.lead);
-                  setNotes(result.lead.notes || "");
+                        setNotes(result.lead.notes || "");
+                        setCrmNotes(result.lead.lead_notes || []);
       
                   // Load saved enrichments from JSONB fields if available
                                     if (result.lead.enriched_emails?.length > 0 || result.lead.enriched_phones?.length > 0 || result.lead.enriched_aliases?.length > 0) {
@@ -290,26 +298,81 @@ export default function LeadProfilePage({
   };
 
   const saveNotes = async () => {
-      if (!lead) return;
-      setSavingNotes(true);
-      try {
-        const headers = await getAuthHeaders();
-        const response = await fetch(`/api/leads/${lead.id}`, {
-          method: "PATCH",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({ notes }),
-        });
+        if (!lead) return;
+        setSavingNotes(true);
+        try {
+          const headers = await getAuthHeaders();
+          const response = await fetch(`/api/leads/${lead.id}`, {
+            method: "PATCH",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({ notes }),
+          });
 
-      if (response.ok) {
-        alert("Notes saved!");
+        if (response.ok) {
+          alert("Notes saved!");
+        }
+      } catch (error) {
+        console.error("Error saving notes:", error);
+        alert("Failed to save notes");
+      } finally {
+        setSavingNotes(false);
       }
-    } catch (error) {
-      console.error("Error saving notes:", error);
-      alert("Failed to save notes");
-    } finally {
-      setSavingNotes(false);
-    }
-  };
+    };
+
+    // ── CRM Notes CRUD ──
+    const persistCrmNotes = async (updatedNotes: typeof crmNotes) => {
+      if (!lead) return;
+      const headers = await getAuthHeaders();
+      await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ lead_notes: updatedNotes }),
+      });
+      setCrmNotes(updatedNotes);
+    };
+
+    const addNote = async () => {
+      if (!lead || !noteSubject.trim()) return;
+      const now = new Date().toISOString();
+      const newNote = {
+        id: crypto.randomUUID(),
+        subject: noteSubject.trim(),
+        description: noteDescription.trim(),
+        created_at: now,
+      };
+      const updated = [...crmNotes, newNote];
+      await persistCrmNotes(updated);
+      setNoteSubject("");
+      setNoteDescription("");
+      setShowNoteForm(false);
+    };
+
+    const startEditNote = (note: typeof crmNotes[0]) => {
+      setEditingNoteId(note.id);
+      setNoteSubject(note.subject);
+      setNoteDescription(note.description || "");
+      setShowNoteForm(true);
+    };
+
+    const saveEditNote = async () => {
+      if (!lead || !editingNoteId || !noteSubject.trim()) return;
+      const updated = crmNotes.map((n) =>
+        n.id === editingNoteId
+          ? { ...n, subject: noteSubject.trim(), description: noteDescription.trim(), updated_at: new Date().toISOString() }
+          : n
+      );
+      await persistCrmNotes(updated);
+      setNoteSubject("");
+      setNoteDescription("");
+      setEditingNoteId(null);
+      setShowNoteForm(false);
+    };
+
+    const deleteNote = async (noteId: string) => {
+      if (!confirm("Delete this note?")) return;
+      const updated = crmNotes.filter((n) => n.id !== noteId);
+      await persistCrmNotes(updated);
+    };
 
   const deleteLead = async () => {
       if (!lead) return;
@@ -1087,24 +1150,95 @@ export default function LeadProfilePage({
                     </div>
 
                     {/* Notes Section */}
+        {/* Notes Section — CRM-style */}
         <div className="bg-white/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg transition-colors duration-300">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
-            Notes & Outreach
-          </h2>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add notes about this lead (e.g., outreach status, campaign ideas, follow-up dates...)"
-            className="w-full p-3 sm:p-4 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] sm:min-h-[150px] resize-y bg-white text-black placeholder-gray-400 transition-colors duration-300 text-sm sm:text-base"
-          />
-          <button
-            onClick={saveNotes}
-            disabled={savingNotes}
-            className="mt-3 sm:mt-4 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg sm:rounded-xl font-semibold hover:shadow-xl transition-all disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto"
-          >
-            {savingNotes ? "Saving..." : "Save Notes"}
-          </button>
-        </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Notes & Outreach
+                    </h2>
+                    <button
+                      onClick={() => { setShowNoteForm(true); setEditingNoteId(null); setNoteSubject(""); setNoteDescription(""); }}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Add Note
+                    </button>
+                  </div>
+
+                  {/* Note Form */}
+                  {showNoteForm && (
+                    <div className="mb-4 p-4 bg-white rounded-xl border border-blue-200 shadow-sm">
+                      <input
+                        type="text"
+                        value={noteSubject}
+                        onChange={(e) => setNoteSubject(e.target.value)}
+                        placeholder="Note subject..."
+                        className="w-full mb-2 p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black placeholder-gray-400 text-sm"
+                      />
+                      <textarea
+                        value={noteDescription}
+                        onChange={(e) => setNoteDescription(e.target.value)}
+                        placeholder="Description (optional)..."
+                        rows={3}
+                        className="w-full mb-3 p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black placeholder-gray-400 text-sm resize-y"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => { setShowNoteForm(false); setEditingNoteId(null); setNoteSubject(""); setNoteDescription(""); }}
+                          className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={editingNoteId ? saveEditNote : addNote}
+                          disabled={!noteSubject.trim()}
+                          className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all disabled:opacity-50"
+                        >
+                          {editingNoteId ? "Save Changes" : "Add Note"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes List */}
+                  {crmNotes.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <svg className="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <p className="text-sm">No notes yet</p>
+                      <p className="text-xs mt-1">Click "Add Note" to track outreach, ideas, or follow-ups</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {crmNotes.toReversed().map((n) => (
+                        <div key={n.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                          <div className="p-3.5 sm:p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{n.subject}</h3>
+                                {n.description && (
+                                  <p className="text-sm text-gray-600 mt-1.5 whitespace-pre-wrap leading-relaxed">{n.description}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-1 flex-shrink-0">
+                                <button onClick={() => startEditNote(n)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                </button>
+                                <button onClick={() => deleteNote(n.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-2">
+                              {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              {n.updated_at ? " (edited)" : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
       </div>
     </div>
   );
