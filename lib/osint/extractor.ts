@@ -28,6 +28,12 @@ const BLOCKLIST_DOMAINS = new Set([
   "domain.com", "test.com", "test.org",
   // Search-engine internal — not real user emails
   "duckduckgo.com",
+  // Error tracking / CI — hash emails, not real people
+  "sentry.io", "wixpress.com", "sentry-next.wixpress.com",
+  // Placeholder / template domains
+  "mysite.com", "yourbusiness.com", "yourwebsite.com",
+  "mywebsite.com", "oursite.com", "samplesite.com",
+  "placeholder.com", "yoursite.com", "theirsite.com",
 ]);
 // NOTE: We do NOT block gmail/yahoo/hotmail/outlook — those are real people's emails.
 // We only block obviously sample/fake domains and search-engine-internal addresses.
@@ -62,6 +68,16 @@ function cleanEmail(raw: string): string | null {
   if (/^\d+x/.test(parts[0].split(/[.\-_]/).pop() || "")) return null;
   // Block @ followed by numbers-then-dimension pattern: @2x-1024x442
   if (/^[\d]+x-?[\d]+x/.test(parts[0])) return null;
+
+  // ── FILTER: Hash/hex local parts (Sentry, error trackers, CI systems) ──
+  // e.g. 605a7baede844d278b89dc95ae0a9123@domain.com = 32 hex chars
+  const localPart = parts[0];
+  if (/^[a-f0-9]{16,}$/.test(localPart)) return null;
+
+  // ── FILTER: Placeholder/role emails that don't match a real person ──
+  // e.g. you@yourbusiness.com, info@template.com
+  const placeholderLocalParts = ["you", "yourname", "name", "username", "user"];
+  if (placeholderLocalParts.includes(localPart)) return null;
 
   return email;
 }

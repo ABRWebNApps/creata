@@ -147,7 +147,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       const generated = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname);
       for (const email of generated) {
         if (!result.emails.some((e) => e.email === email)) {
-          result.emails.push({ email, source_url: null, confidence: 45 });
+          result.emails.push({ email, source_url: null, confidence: 50 });
         }
       }
     }

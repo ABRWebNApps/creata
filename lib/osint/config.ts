@@ -28,7 +28,7 @@ export const MAX_PAGES_PER_CYCLE = 25;
 export const CRAWL_OWN_PROFILE = true;
 
 /** Minimum confidence score for any extracted contact */
-export const MIN_CONFIDENCE = 10;
+export const MIN_CONFIDENCE = 50;
 
 /** Confidence boost for emails found on the lead's own profile page */
 export const OWN_PROFILE_CONFIDENCE = 90;
