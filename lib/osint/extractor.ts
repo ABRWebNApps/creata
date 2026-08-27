@@ -53,6 +53,16 @@ function cleanEmail(raw: string): string | null {
     "arpa",
   ]);
   if (skipTlds.has(tld)) return null;
+
+  // ── FILTER: Asset/file paths parsed as emails ──
+  // e.g. asset-2@2x-1024x442.png → domain is "2x-1024x442.png"
+  // Block any email where the domain contains size/asset patterns
+  if (/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|json|xml|zip|mp4|mp3|mov|pdf|woff2?)$/.test(domain)) return null;
+  // Block local parts that look like filenames (e.g. asset-2)
+  if (/^\d+x/.test(parts[0].split(/[.\-_]/).pop() || "")) return null;
+  // Block @ followed by numbers-then-dimension pattern: @2x-1024x442
+  if (/^[\d]+x-?[\d]+x/.test(parts[0])) return null;
+
   return email;
 }
 
@@ -120,13 +130,13 @@ export function extractUrls(html: string): string[] {
 export function extractPhones(text: string, country: string = "ng"): string[] {
   const patterns: Record<string, RegExp> = {
     // Nigeria: +234 XXX XXX XXXX or 080XXXXXXX (11 digits starting with 0)
-    ng: /(?:\+234[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{4}|0[7-9]\d[\s-]?\d{3}[\s-]?\d{4})(?=\s|$|[.,!?])/g,
-    // US/CA: +1 (XXX) XXX-XXXX or (XXX) XXX-XXXX
-    us: /(?:\+1[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}(?=\s|$|[.,!?])/g,
-    // UK: +44 XXXX XXXXXX
-    uk: /(?:\+44[\s-]?\d{4}[\s-]?\d{6}|0\d{4}[\s-]?\d{6})(?=\s|$|[.,!?])/g,
-    // Global fallback: any +CC number with at least 7 digits
-    global: /(?:\+?\d{1,4}[\s-]?\d{4,}[\s-]?\d{3,})(?=\s|$|[.,!?])/g,
+    ng: /(?:\+234[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{4}|0[7-9]\d[\s-]?\d{3}[\s-]?\d{4})(?=\s|$|[.,!?()])/g,
+    // US/CA: +1 (XXX) XXX-XXXX or (XXX) XXX-XXXX — must be 10 digits after +1
+    us: /(?:\+1[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}(?=\s|$|[.,!?()])/g,
+    // UK: +44 XXXX XXXXXX — 10-11 digit mobile/landline
+    uk: /(?:\+44[\s-]?\d{4}[\s-]?\d{5,6}|0\d{4}[\s-]?\d{5,6})(?=\s|$|[.,!?()])/g,
+    // Global: only match properly formatted numbers with +
+    global: /\+\d{1,3}[\s-]?\d{4,}[\s-]?\d{4,}(?=\s|$|[.,!?()])/g,
   };
 
   const p = patterns[country] || patterns.global;
@@ -154,11 +164,11 @@ function cleanPhone(raw: string): string | null {
   let cleaned = raw.replace(/[\s\-().]/g, "");
   const digits = cleaned.replace(/\D/g, "");
   // Must be at least 7 digits and not just a repeating pattern
-  if (digits.length < 7) return null;
+  if (digits.length < 8) return null;
   // Max 15 digits (ITU-T E.164 limit)
   if (digits.length > 15) return null;
   // Filter 6-7 digit "numbers" that aren't real phone numbers
-  // Real phone numbers are always at least 8 digits (after country code)
+  // Real local numbers are 8-11 digits; international are 10-15
   if (digits.length < 8 && !digits.startsWith("0")) return null;
   // Check for obvious false positives (e.g., year numbers, short IDs)
   if (/^\d{4}$/.test(digits)) return null;
@@ -176,6 +186,30 @@ function cleanPhone(raw: string): string | null {
   if (digits.length >= 13) return null;
   // Must have at least one non-repeating digit pattern (filters 1111111111)
   if (/^(\d)\1{6,}$/.test(digits)) return null;
+
+  // ── STRONG JUNK FILTERS ──
+  // Block numbers that look like prices/file-sizes (e.g., 18000000, 10368000)
+  if (digits.length >= 8 && /^[1-9]0{5,}$/.test(digits)) return null;
+  // Block sequential digits (12345678, 87654321)
+  if (digits.length >= 8) {
+    let asc = true, desc = true;
+    for (let i = 1; i < digits.length; i++) {
+      const curr = parseInt(digits[i]);
+      const prev = parseInt(digits[i-1]);
+      if (curr !== prev + 1) asc = false;
+      if (curr !== prev - 1) desc = false;
+    }
+    if (asc || desc) return null;
+  }
+  // Block numbers that are just multiples of common fake numbers
+  // (e.g., 100000000, 553648129 looks like an IP address component)
+  if (digits.length === 9 && /^5{2,3}\d{6,7}$/.test(digits)) return null;
+  // Block numbers without a + or 0 prefix that are < 10 digits (no country code context)
+  if (!cleaned.startsWith("+") && !digits.startsWith("0") && digits.length < 10) return null;
+  // Block numbers where 50%+ are zeros (likely fake/generated)
+  const zeroCount = (digits.match(/0/g) || []).length;
+  if (digits.length >= 8 && zeroCount / digits.length > 0.5) return null;
+
   return cleaned;
 }
 

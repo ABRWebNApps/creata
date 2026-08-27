@@ -614,10 +614,13 @@ export default function LeadProfilePage({
                         : "bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-xl"
                     }`}
                   >
-                    <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${enriching ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <span className="hidden sm:inline">{enriching ? "Enriching..." : "Enrich"}</span>
+                                      <div className={`w-4 h-4 sm:w-5 sm:h-5 ${enriching ? "animate-spin" : ""}`}>
+                                        <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                          <circle cx="12" cy="12" r="10" strokeWidth={3} strokeDasharray="31.4 31.4" strokeLinecap="round" className={enriching ? "opacity-100" : "opacity-0"} />
+                                          {!enriching && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />}
+                                        </svg>
+                                      </div>
+                                      <span className="hidden sm:inline">{enriching ? "Enriching..." : "Enrich"}</span>
                     <span className="sm:hidden">{enriching ? "..." : "Find"}</span>
                   </button>
 
