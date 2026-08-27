@@ -152,9 +152,14 @@ export function extractPhones(text: string, country: string = "ng"): string[] {
 /** Normalize phone number: remove spaces, dashes, parens */
 function cleanPhone(raw: string): string | null {
   let cleaned = raw.replace(/[\s\-().]/g, "");
-  // Must be at least 7 digits and not just a repeating pattern
   const digits = cleaned.replace(/\D/g, "");
-  if (digits.length < 7 || digits.length > 15) return null;
+  // Must be at least 7 digits and not just a repeating pattern
+  if (digits.length < 7) return null;
+  // Max 15 digits (ITU-T E.164 limit)
+  if (digits.length > 15) return null;
+  // Filter 6-7 digit "numbers" that aren't real phone numbers
+  // Real phone numbers are always at least 8 digits (after country code)
+  if (digits.length < 8 && !digits.startsWith("0")) return null;
   // Check for obvious false positives (e.g., year numbers, short IDs)
   if (/^\d{4}$/.test(digits)) return null;
   // Filter out Instagram/YouTube/Twitter internal IDs (96xxxx, 178xxxx, etc.)
@@ -169,6 +174,8 @@ function cleanPhone(raw: string): string | null {
   if (digits.length === 8 && /^(20|19)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test(digits)) return null;
   // Filter pure timestamps (13+ digit numbers starting with timestamp ranges)
   if (digits.length >= 13) return null;
+  // Must have at least one non-repeating digit pattern (filters 1111111111)
+  if (/^(\d)\1{6,}$/.test(digits)) return null;
   return cleaned;
 }
 
