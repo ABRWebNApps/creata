@@ -76,7 +76,7 @@ export interface LeadAlias {
 
 /** Enrichment result returned to the caller */
 export interface EnrichResult {
-  emails: { email: string; source_url: string | null; confidence: number }[];
+  emails: { email: string; source_url: string | null; confidence: number; is_generated: boolean }[];
   phones: { phone: string; source_url: string | null; confidence: number }[];
   aliases: { platform: string; profile_url: string }[];
   errors: string[];

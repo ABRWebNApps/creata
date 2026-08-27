@@ -1,5 +1,5 @@
 /* ── OSINT Engine — Main orchestrator ── */
-/* Pure search + extraction + smart fallback generation */
+/* Pure search + extraction + generated fallback marked clearly */
 
 import { searchEngine } from "./searcher";
 import { crawlPage } from "./crawler";
@@ -13,28 +13,24 @@ import {
   MAX_CRAWL_PER_QUERY,
   OWN_PROFILE_CONFIDENCE,
   BIO_REGEX_CONFIDENCE,
-  SEARCH_RESULT_CONFIDENCE,
   CRAWLED_PAGE_CONFIDENCE,
-  CROSS_PLATFORM_CONFIDENCE,
   MIN_CONFIDENCE,
   CRAWL_OWN_PROFILE,
 } from "./config";
 import type {
   EnrichOptions,
   EnrichResult,
-  SearchResult,
   CrawlResult,
-  EnrichSource,
 } from "./types";
 
 /**
  * Run a single enrichment cycle for a lead.
  * Steps:
  *  1. Quick bio regex (fast path)
- *  2. Search engine queries (parallel) - Bing then DDG fallback
- *  3. Crawl found URLs
+ *  2. Search engine queries (parallel)
+ *  3. Crawl found URLs + discovered cross-platform aliases
  *  4. Crawl lead's own profile page
- *  5. Smart generated email fallback if no real emails found
+ *  5. Smart generated email fallback (marked as generated)
  *  6. Return results — user clicks Save when ready
  */
 export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
@@ -45,10 +41,8 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     errors: [],
   };
 
-  // Clean names for search — strip trailing digits from handle
   const cleanHandle = stripTrailingDigits(opts.leadHandle);
   const searchName = opts.leadNickname || cleanHandle;
-  // For generated emails: use the name parts separately
   const nameParts = searchName.split(/\s+/).filter(Boolean);
   const firstName = nameParts[0] || searchName;
   const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
@@ -58,7 +52,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     const bioEmails = extractEmailsFromBio(opts.leadBio);
     for (const email of bioEmails) {
       const conf = Math.max(BIO_REGEX_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
-      result.emails.push({ email, source_url: null, confidence: conf });
+      result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
     }
 
     const bioWebsite = extractWebsiteFromBio(opts.leadBio);
@@ -73,7 +67,6 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     const searchResults = await Promise.allSettled(
       queries.map(async (q) => {
         const { results } = await searchEngine(q);
-        // Extract emails from search result titles + snippets only
         const snippetText = results.map((r) => `${r.title} ${r.snippet}`).join(" ");
         const snippetEmails = extractEmails(snippetText);
         return { query: q, results, snippetEmails };
@@ -94,7 +87,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
         if (!result.emails.some((e) => e.email === email)) {
           const conf = computeEmailConfidence(email, opts.leadHandle, searchName);
           if (conf >= MIN_CONFIDENCE) {
-            result.emails.push({ email, source_url: null, confidence: conf });
+            result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
           }
         }
       }
@@ -110,7 +103,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       // Queue top N URLs for crawling
       const urlsToCrawl = results.slice(0, MAX_CRAWL_PER_QUERY).map((r) => r.url);
 
-      // ── Step 5: Crawl found URLs ──
+      // ── Step 5: Crawl found search-result URLs ──
       for (const url of urlsToCrawl) {
         try {
           const crawl = await crawlPage(url);
@@ -128,7 +121,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
         for (const email of ownCrawl.emails) {
           if (!result.emails.some((e) => e.email === email)) {
             const conf = Math.max(OWN_PROFILE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
-            result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: conf });
+            result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: conf, is_generated: false });
           }
         }
         for (const phone of ownCrawl.phones) {
@@ -141,13 +134,58 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       }
     }
 
-    // ── Step 7: Smart generated email fallback ──
-    // Only generate if we found 0 real emails AND we have enough name info
+    // ── Step 7: Crawl all discovered cross-platform aliases ──
+    // These are real profile pages (LinkedIn, GitHub, website, etc.)
+    // that often contain contact info or email links
+    const aliasUrlsToCrawl = result.aliases
+      .map((a) => a.profile_url)
+      .filter((url) => url !== opts.leadProfileUrl); // skip own profile (already crawled)
+
+    for (const url of aliasUrlsToCrawl) {
+      try {
+        const crawl = await crawlPage(url);
+        // Only add email (aliases already in result)
+        for (const email of crawl.emails) {
+          if (!result.emails.some((e) => e.email === email)) {
+            const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
+            if (conf >= MIN_CONFIDENCE) {
+              result.emails.push({ email, source_url: url, confidence: conf, is_generated: false });
+            }
+          }
+        }
+        for (const phone of crawl.phones) {
+          if (!result.phones.some((p) => p.phone === phone)) {
+            result.phones.push({ phone, source_url: url, confidence: CRAWLED_PAGE_CONFIDENCE });
+          }
+        }
+        // Discovered alias brought new URLs? Crawl a few of those too
+        for (const nestedUrl of crawl.urls.slice(0, 3)) {
+          try {
+            if (nestedUrl.includes(url.split("/")[2] || url)) {
+              const nestedCrawl = await crawlPage(nestedUrl);
+              for (const email of nestedCrawl.emails) {
+                if (!result.emails.some((e) => e.email === email)) {
+                  const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
+                  if (conf >= MIN_CONFIDENCE) {
+                    result.emails.push({ email, source_url: nestedUrl, confidence: conf, is_generated: false });
+                  }
+                }
+              }
+            }
+          } catch { }
+        }
+      } catch (err) {
+        result.errors.push(`Alias crawl failed for ${url.slice(0, 60)}: ${(err as Error).message}`);
+      }
+    }
+
+    // ── Step 8: Smart generated email fallback (marked as generated) ──
+    // Only fires if NO real emails found at all
     if (result.emails.length === 0 && (firstName || lastName)) {
       const generated = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname);
       for (const email of generated) {
         if (!result.emails.some((e) => e.email === email)) {
-          result.emails.push({ email, source_url: null, confidence: 50 });
+          result.emails.push({ email, source_url: null, confidence: 50, is_generated: true });
         }
       }
     }
@@ -159,42 +197,24 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
   return result;
 }
 
-/**
- * Strip trailing digits from a handle.
- * jondoe4567 → jondoe
- */
 function stripTrailingDigits(s: string): string {
   return s.replace(/\d+$/, "");
 }
 
-/**
- * Build targeted search queries.
- * Uses the clean name (nickname or stripped handle) not the raw handle with digits.
- */
 function buildQueries(opts: EnrichOptions, searchName: string, cleanHandle: string): string[] {
   const queries: string[] = [];
-
-  // Phase 1: Search by clean name
   queries.push(searchName);
   queries.push(`${searchName} email`);
   queries.push(`${searchName} contact`);
   queries.push(`${searchName} linkedin`);
   queries.push(`${searchName} twitter`);
-
-  // Phase 2: Clean handle queries
   if (cleanHandle.toLowerCase() !== searchName.toLowerCase()) {
     queries.push(cleanHandle);
     queries.push(`${cleanHandle} email`);
   }
-
   return queries;
 }
 
-/**
- * Generate smart probable email addresses when scraping finds nothing.
- * Uses clean name parts — no trailing digits from handles.
- * Patterns make realistic personal email addresses a real person might use.
- */
 function generateProbableEmails(
   firstName: string,
   lastName: string,
@@ -206,48 +226,30 @@ function generateProbableEmails(
   const l = lastName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const clean = cleanHandle.toLowerCase().replace(/^@/, "").replace(/[^a-z0-9._-]/g, "");
   const nick = nickname ? nickname.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9._-]/g, "") : "";
-
   const domains = ["gmail.com", "outlook.com", "proton.me", "yahoo.com", "icloud.com"];
 
-  // Pattern 1: firstname.lastname@gmail.com
   if (f && l) {
-    for (const d of domains) {
-      emails.push(`${f}.${l}@${d}`);
-    }
+    for (const d of domains) emails.push(`${f}.${l}@${d}`);
     emails.push(`${f}${l}@gmail.com`);
     emails.push(`${l}.${f}@gmail.com`);
   }
-
-  // Pattern 2: Based on handle if different from name
   if (clean && clean !== `${f}${l}` && clean !== f) {
     emails.push(`${clean}@gmail.com`);
     emails.push(`${clean}@outlook.com`);
   }
-
-  // Pattern 3: Nickname-based (most accurate if available)
   if (nick && nick !== clean && nick !== `${f}.${l}`) {
     emails.push(`${nick}@gmail.com`);
     emails.push(`${nick}@proton.me`);
   }
-
-  // Pattern 4: First name only (if no last name)
   if (f && !l) {
     emails.push(`${f}@gmail.com`);
     emails.push(`${f}@outlook.com`);
   }
+  if (f && l) emails.push(`${f[0]}${l}@gmail.com`);
 
-  // Pattern 5: First initial + last name
-  if (f && l) {
-    emails.push(`${f[0]}${l}@gmail.com`);
-  }
-
-  // Deduplicate
   return [...new Set(emails)];
 }
 
-/**
- * Detect a cross-platform profile from a search result URL.
- */
 function detectPlatformAlias(
   url: string,
   title: string,
@@ -255,7 +257,6 @@ function detectPlatformAlias(
   searchName: string,
 ): { platform: string; profile_url: string } | null {
   const lower = url.toLowerCase();
-
   const platforms: Array<{ key: string; pattern: RegExp }> = [
     { key: "linkedin", pattern: /linkedin\.com\/in\// },
     { key: "github", pattern: /github\.com\// },
@@ -263,7 +264,6 @@ function detectPlatformAlias(
     { key: "instagram", pattern: /instagram\.com\// },
     { key: "youtube", pattern: /youtube\.com\/@/ },
   ];
-
   for (const p of platforms) {
     if (p.key === opts.leadPlatform) continue;
     if (p.pattern.test(lower)) {
@@ -275,13 +275,9 @@ function detectPlatformAlias(
       }
     }
   }
-
   return null;
 }
 
-/**
- * Collect crawl results into enrichment result.
- */
 function collectCrawlResults(
   crawl: CrawlResult,
   sourceUrl: string,
@@ -293,11 +289,10 @@ function collectCrawlResults(
     if (!result.emails.some((e) => e.email === email)) {
       const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, handle, name));
       if (conf >= MIN_CONFIDENCE) {
-        result.emails.push({ email, source_url: sourceUrl, confidence: conf });
+        result.emails.push({ email, source_url: sourceUrl, confidence: conf, is_generated: false });
       }
     }
   }
-
   for (const phone of crawl.phones) {
     if (!result.phones.some((p) => p.phone === phone)) {
       result.phones.push({ phone, source_url: sourceUrl, confidence: CRAWLED_PAGE_CONFIDENCE });
