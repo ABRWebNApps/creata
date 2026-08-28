@@ -178,8 +178,8 @@ export function extractUrls(html: string): string[] {
  */
 export function extractPhones(text: string, country: string = "ng"): string[] {
   const patterns: Record<string, RegExp> = {
-    // Nigeria: +234 XXX XXX XXXX or 080XXXXXXX (11 digits starting with 0)
-    ng: /(?:\+234[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{4}|0[7-9]\d[\s-]?\d{3}[\s-]?\d{4})(?=\s|$|[.,!?()])/g,
+    // Nigeria: +234 XXX XXX XXXX or 080XXXXXXX (exactly 11 digits starting with 0)
+    ng: /(?:\+234[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{4}|0[7-9]\d{2}[\s-]?\d{3}[\s-]?\d{4})(?=\s|$|[.,!?()])/g,
     // US/CA: +1 (XXX) XXX-XXXX or (XXX) XXX-XXXX — must be 10 digits after +1
     us: /(?:\+1[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}(?=\s|$|[.,!?()])/g,
     // UK: +44 XXXX XXXXXX — 10-11 digit mobile/landline

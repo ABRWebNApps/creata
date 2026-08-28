@@ -1,11 +1,9 @@
-/* ── OSINT Engine — Main orchestrator ── */
-/* 1. Firecrawl search with dorking queries to find pages likely containing emails   */
-/* 2. Firecrawl scrape every result page (reliable content extraction)                */
-/* 3. Multi-pass: search snippets, crawled pages, own profile, cross-platform aliases */
-/* 4. Cross-platform alias discovery → scrape those too                               */
-/* 5. generateProbableEmails() as absolute last resort if nothing found               */
+/* ── OSINT Engine — Fast parallel pipeline ── */
+/* 1. Search snippets + own-profile crawl (parallel, fast)         */
+/* 2. Only scrape pages that SIGNAL emails (have @ in snippet)     */
+/* 3. Phone max 3. Generated fallback included. Speed target <30s  */
 
-import { searchEngine, buildEmailSearchQueries, firecrawlScrape } from "./searcher";
+import { searchEngine, firecrawlScrape } from "./searcher";
 import { crawlPage } from "./crawler";
 import {
   extractEmailsFromBio,
@@ -20,22 +18,10 @@ import {
   MIN_CONFIDENCE,
   CRAWL_OWN_PROFILE,
 } from "./config";
-import type {
-  EnrichOptions,
-  EnrichResult,
-  CrawlResult,
-} from "./types";
+import type { EnrichOptions, EnrichResult, CrawlResult } from "./types";
 
-/**
- * Run a single enrichment cycle for a lead.
- */
 export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
-  const result: EnrichResult = {
-    emails: [],
-    phones: [],
-    aliases: [],
-    errors: [],
-  };
+  const result: EnrichResult = { emails: [], phones: [], aliases: [], errors: [] };
 
   const cleanHandle = stripTrailingDigits(opts.leadHandle);
   const searchName = opts.leadNickname || cleanHandle;
@@ -44,7 +30,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
   const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
 
   try {
-    // ── Step 1: Fast-path bio extraction ──
+    // ── Step 1: Bio fast-path ──
     const bioEmails = extractEmailsFromBio(opts.leadBio);
     for (const email of bioEmails) {
       const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
@@ -52,148 +38,107 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     }
 
     const bioWebsite = extractWebsiteFromBio(opts.leadBio);
-    if (bioWebsite) {
-      result.aliases.push({ platform: "website", profile_url: bioWebsite });
+    if (bioWebsite) result.aliases.push({ platform: "website", profile_url: bioWebsite });
+
+    // ── Step 2: Run 3 smart searches (parallel, fast) ──
+    const smartQueries = [
+      searchName,
+      `${searchName} email OR contact`,
+      cleanHandle,
+    ];
+    if (cleanHandle !== searchName.toLowerCase().replace(/\s/g, "")) {
+      smartQueries.push(`${cleanHandle} email`);
     }
 
-    // ── Step 2: Build dorking-style search queries ──
-    const queries = buildEmailSearchQueries(searchName, cleanHandle);
-
-    // ── Step 3: Run ALL search queries through Firecrawl (parallel) ──
-    const searchResults = await Promise.allSettled(
-      queries.map(async (q) => {
-        const { results, rawHtml } = await searchEngine(q);
-        // Extract emails from snippets immediately
-        const snippetEmails = extractEmails(rawHtml);
-        return { query: q, results, snippetEmails };
-      }),
+    const searchResponses = await Promise.allSettled(
+      smartQueries.map((q) => searchEngine(q)),
     );
 
-    // ── Step 4: Process ALL search results — extract from snippets,
-    //     detect cross-platform profiles, collect URLs to scrape
-    const urlsToScrape: string[] = [];
+    // Collect all search results, detect snippets containing @ (email signals)
+    const allResults: Array<{ url: string; title: string; snippet: string }> = [];
+    const emailSignalPages: string[] = [];
 
-    for (const srPromise of searchResults) {
-      if (srPromise.status !== "fulfilled") continue;
-
-      const { query, results, snippetEmails } = srPromise.value;
-
-      // Extract emails from search snippets (free — no credit cost)
+    for (const sr of searchResponses) {
+      if (sr.status !== "fulfilled") continue;
+      for (const r of sr.value.results) {
+        if (!allResults.some((x) => x.url === r.url)) {
+          allResults.push(r);
+          // Check if snippet contains @ → page likely has an email
+          if (r.snippet.includes("@") || r.title.includes("@") || /email|contact|mail/i.test(r.snippet)) {
+            emailSignalPages.push(r.url);
+          }
+        }
+      }
+      // Extract emails from snippets immediately
+      const snippetEmails = extractEmails(sr.value.rawHtml);
       for (const email of snippetEmails) {
         if (!result.emails.some((e) => e.email === email)) {
           const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
-          if (conf >= MIN_CONFIDENCE) {
-            result.emails.push({ email, source_url: null, confidence: conf });
-          }
-        }
-      }
-
-      // Detect cross-platform profiles from search results
-      for (const sr of results) {
-        const alias = detectPlatformAlias(sr.url, sr.title, opts, searchName);
-        if (alias && !result.aliases.some((a) => a.profile_url === alias.profile_url)) {
-          result.aliases.push(alias);
-        }
-      }
-
-      // Collect all unique URLs for scraping
-      for (const r of results) {
-        if (!urlsToScrape.includes(r.url)) {
-          urlsToScrape.push(r.url);
+          if (conf >= MIN_CONFIDENCE) result.emails.push({ email, source_url: null, confidence: conf });
         }
       }
     }
 
-    // ── Step 5: Scrape ALL unique result URLs (Firecrawl scrape is reliable) ──
-    // Limit to reasonable number to avoid burning all credits
-    const maxScrape = Math.min(urlsToScrape.length, 15);
-    for (let i = 0; i < maxScrape; i++) {
-      const url = urlsToScrape[i];
-      const crawl = await crawlPage(url);
-      collectCrawlResults(crawl, url, result, opts.leadHandle, searchName);
-    }
-
-    // ── Step 6: Crawl the lead's own profile page ──
-    if (CRAWL_OWN_PROFILE && opts.leadProfileUrl) {
-      const ownCrawl = await crawlPage(opts.leadProfileUrl);
-      for (const email of ownCrawl.emails) {
-        if (!result.emails.some((e) => e.email === email)) {
-          const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
-          result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: Math.max(OWN_PROFILE_CONFIDENCE, conf) });
-        }
-      }
-      for (const phone of ownCrawl.phones) {
-        if (!result.phones.some((p) => p.phone === phone)) {
-          result.phones.push({ phone, source_url: opts.leadProfileUrl, confidence: OWN_PROFILE_CONFIDENCE });
-        }
+    // Detect cross-platform aliases
+    for (const r of allResults) {
+      const alias = detectPlatformAlias(r.url, r.title, opts, searchName);
+      if (alias && !result.aliases.some((a) => a.profile_url === alias.profile_url)) {
+        result.aliases.push(alias);
       }
     }
 
-    // ── Step 7: Scrape all discovered cross-platform aliases ──
-    const aliasUrls = result.aliases
-      .map((a) => a.profile_url)
-      .filter((url) => url !== opts.leadProfileUrl);
-
-    for (const url of aliasUrls) {
-      const crawl = await crawlPage(url);
-      for (const email of crawl.emails) {
-        if (!result.emails.some((e) => e.email === email)) {
-          const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
-          if (conf >= MIN_CONFIDENCE) {
-            result.emails.push({ email, source_url: url, confidence: conf });
-          }
-        }
+    // ── Step 3: Crawl own profile (+ website from bio) in parallel ──
+    const ownAndWebsite: string[] = [];
+    if (CRAWL_OWN_PROFILE && opts.leadProfileUrl) ownAndWebsite.push(opts.leadProfileUrl);
+    for (const a of result.aliases) {
+      if (a.platform === "website" && a.profile_url !== opts.leadProfileUrl) {
+        ownAndWebsite.push(a.profile_url);
       }
-      for (const phone of crawl.phones) {
-        if (!result.phones.some((p) => p.phone === phone)) {
-          result.phones.push({ phone, source_url: url, confidence: CRAWLED_PAGE_CONFIDENCE });
-        }
-      }
-      // Nested URLs from alias pages
-      for (const nestedUrl of crawl.urls.slice(0, 3)) {
-        try {
-          if (nestedUrl.includes(url.split("/")[2] || url)) {
-            const nestedCrawl = await crawlPage(nestedUrl);
-            for (const email of nestedCrawl.emails) {
-              if (!result.emails.some((e) => e.email === email)) {
-                const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
-                if (conf >= MIN_CONFIDENCE) {
-                  result.emails.push({ email, source_url: nestedUrl, confidence: conf });
-                }
-              }
-            }
-          }
-        } catch { /* skip */ }
+    }
+    const ownCrawls = await Promise.allSettled(ownAndWebsite.map((u) => crawlPage(u)));
+    for (const c of ownCrawls) {
+      if (c.status === "fulfilled") {
+        collectCrawlResults(c.value, "", result, opts.leadHandle, searchName);
       }
     }
 
-    // ── Step 8: Firecrawl-scrape contact/about pages from the found website ──
-    // If we found a website alias, try scraping common contact page paths
-    const websiteUrls = result.aliases
-      .filter((a) => a.platform === "website")
-      .map((a) => a.profile_url);
-    for (const site of websiteUrls) {
-      const contactPaths = ["/contact", "/contact-us", "/about", "/team", "/about-us", "/contact-us.html"];
-      for (const path of contactPaths) {
-        const contactUrl = site.replace(/\/$/, "") + path;
-        try {
-          const contactCrawl = await crawlPage(contactUrl);
-          for (const email of contactCrawl.emails) {
+    // ── Step 4: Scrape only pages that SIGNAL emails (max 5, parallel) ──
+    const pagesToScrape = emailSignalPages.slice(0, 5).filter(
+      (url) => !ownAndWebsite.includes(url),
+    );
+    if (pagesToScrape.length > 0) {
+      const scraped = await Promise.allSettled(pagesToScrape.map((u) => crawlPage(u)));
+      for (const c of scraped) {
+        if (c.status === "fulfilled") {
+          collectCrawlResults(c.value, "", result, opts.leadHandle, searchName);
+        }
+      }
+    }
+
+    // ── Step 5: If we have ANY results but no emails yet, try scraping
+    //     the top 3 search results directly (firecrawl scrape bypasses blocks)
+    if (result.emails.length === 0 && allResults.length > 0) {
+      const topUrls = allResults.slice(0, 3).map((r) => r.url);
+      const fallbackScrapes = await Promise.allSettled(topUrls.map((u) => firecrawlScrape(u)));
+      for (const fs of fallbackScrapes) {
+        if (fs.status === "fulfilled" && fs.value) {
+          const snippetEmails = extractEmails(fs.value);
+          for (const email of snippetEmails) {
             if (!result.emails.some((e) => e.email === email)) {
               const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
-              if (conf >= MIN_CONFIDENCE) {
-                result.emails.push({ email, source_url: contactUrl, confidence: conf });
-              }
+              if (conf >= MIN_CONFIDENCE) result.emails.push({ email, source_url: null, confidence: conf });
             }
           }
-        } catch { /* skip */ }
+        }
       }
     }
 
-    // ── Step 9: generateProbableEmails() as last resort ──
+    // ── Step 6: Cap phones at 3 ──
+    result.phones = result.phones.slice(0, 3);
+
+    // ── Step 7: Generate fallback (only if NO real emails found) ──
     if (result.emails.length === 0 && (firstName || lastName)) {
-      const generated = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname);
-      for (const email of generated) {
+      for (const email of generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname)) {
         if (!result.emails.some((e) => e.email === email)) {
           result.emails.push({ email, source_url: null, confidence: 50 });
         }
@@ -202,6 +147,14 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
 
   } catch (err) {
     result.errors.push(`Enrichment error: ${(err as Error).message}`);
+    // Generate fallback even on error
+    if (result.emails.length === 0 && (firstName || lastName)) {
+      for (const email of generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname)) {
+        if (!result.emails.some((e) => e.email === email)) {
+          result.emails.push({ email, source_url: null, confidence: 50 });
+        }
+      }
+    }
   }
 
   return result;
@@ -211,12 +164,7 @@ function stripTrailingDigits(s: string): string {
   return s.replace(/\d+$/, "");
 }
 
-function generateProbableEmails(
-  firstName: string,
-  lastName: string,
-  cleanHandle: string,
-  nickname: string | undefined,
-): string[] {
+function generateProbableEmails(firstName: string, lastName: string, cleanHandle: string, nickname: string | undefined): string[] {
   const emails: string[] = [];
   const f = firstName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const l = lastName.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -228,6 +176,9 @@ function generateProbableEmails(
     for (const d of domains) emails.push(`${f}.${l}@${d}`);
     emails.push(`${f}${l}@gmail.com`);
     emails.push(`${l}.${f}@gmail.com`);
+  } else if (f) {
+    emails.push(`${f}@gmail.com`);
+    emails.push(`${f}@outlook.com`);
   }
   if (clean && clean !== `${f}${l}` && clean !== f) {
     emails.push(`${clean}@gmail.com`);
@@ -237,21 +188,12 @@ function generateProbableEmails(
     emails.push(`${nick}@gmail.com`);
     emails.push(`${nick}@proton.me`);
   }
-  if (f && !l) {
-    emails.push(`${f}@gmail.com`);
-    emails.push(`${f}@outlook.com`);
-  }
   if (f && l) emails.push(`${f[0]}${l}@gmail.com`);
 
   return [...new Set(emails)];
 }
 
-function detectPlatformAlias(
-  url: string,
-  title: string,
-  opts: EnrichOptions,
-  searchName: string,
-): { platform: string; profile_url: string } | null {
+function detectPlatformAlias(url: string, title: string, opts: EnrichOptions, searchName: string): { platform: string; profile_url: string } | null {
   const lower = url.toLowerCase();
   const platforms: Array<{ key: string; pattern: RegExp }> = [
     { key: "linkedin", pattern: /linkedin\.com\/in\// },
@@ -274,24 +216,17 @@ function detectPlatformAlias(
   return null;
 }
 
-function collectCrawlResults(
-  crawl: CrawlResult,
-  sourceUrl: string,
-  result: EnrichResult,
-  handle: string,
-  name: string,
-) {
+function collectCrawlResults(crawl: CrawlResult, sourceUrl: string, result: EnrichResult, handle: string, name: string) {
+  const src = sourceUrl || null;
   for (const email of crawl.emails) {
     if (!result.emails.some((e) => e.email === email)) {
       const { confidence: conf } = computeEmailConfidence(email, handle, name);
-      if (conf >= MIN_CONFIDENCE) {
-        result.emails.push({ email, source_url: sourceUrl, confidence: conf });
-      }
+      if (conf >= MIN_CONFIDENCE) result.emails.push({ email, source_url: src, confidence: conf });
     }
   }
   for (const phone of crawl.phones) {
     if (!result.phones.some((p) => p.phone === phone)) {
-      result.phones.push({ phone, source_url: sourceUrl, confidence: CRAWLED_PAGE_CONFIDENCE });
+      result.phones.push({ phone, source_url: src, confidence: CRAWLED_PAGE_CONFIDENCE });
     }
   }
 }
