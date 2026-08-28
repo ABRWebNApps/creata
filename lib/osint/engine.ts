@@ -1,5 +1,6 @@
 /* ── OSINT Engine — Main orchestrator ── */
-/* Pure search + extraction + generated fallback marked clearly */
+/* Pure search + extraction. No generated email fallback — either we find  */
+/* real emails from search/crawl, or we return nothing.                     */
 
 import { searchEngine } from "./searcher";
 import { crawlPage } from "./crawler";
@@ -30,8 +31,7 @@ import type {
  *  2. Search engine queries (parallel)
  *  3. Crawl found URLs + discovered cross-platform aliases
  *  4. Crawl lead's own profile page
- *  5. Smart generated email fallback (marked as generated)
- *  6. Return results — user clicks Save when ready
+ *  5. Return results — emails found or empty
  */
 export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
   const result: EnrichResult = {
@@ -51,8 +51,8 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     // ── Step 1: Fast-path bio extraction ──
     const bioEmails = extractEmailsFromBio(opts.leadBio);
     for (const email of bioEmails) {
-      const conf = Math.max(BIO_REGEX_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName).confidence);
-      result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
+      const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
+      result.emails.push({ email, source_url: null, confidence: Math.max(BIO_REGEX_CONFIDENCE, conf) });
     }
 
     const bioWebsite = extractWebsiteFromBio(opts.leadBio);
@@ -75,10 +75,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
 
     // ── Step 4: Process search results ──
     for (const srPromise of searchResults) {
-      if (srPromise.status !== "fulfilled") {
-        // Don't surface engine failures to user — they're expected in serverless
-        continue;
-      }
+      if (srPromise.status !== "fulfilled") continue;
 
       const { query, results, snippetEmails } = srPromise.value;
 
@@ -87,7 +84,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
         if (!result.emails.some((e) => e.email === email)) {
           const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
           if (conf >= MIN_CONFIDENCE) {
-            result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
+            result.emails.push({ email, source_url: null, confidence: conf });
           }
         }
       }
@@ -115,8 +112,8 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       const ownCrawl = await crawlPage(opts.leadProfileUrl);
       for (const email of ownCrawl.emails) {
         if (!result.emails.some((e) => e.email === email)) {
-          const conf = Math.max(OWN_PROFILE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName).confidence);
-          result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: conf, is_generated: false });
+          const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
+          result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: Math.max(OWN_PROFILE_CONFIDENCE, conf) });
         }
       }
       for (const phone of ownCrawl.phones) {
@@ -137,7 +134,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
         if (!result.emails.some((e) => e.email === email)) {
           const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
           if (conf >= MIN_CONFIDENCE) {
-            result.emails.push({ email, source_url: url, confidence: conf, is_generated: false });
+            result.emails.push({ email, source_url: url, confidence: conf });
           }
         }
       }
@@ -155,22 +152,12 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
               if (!result.emails.some((e) => e.email === email)) {
                 const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
                 if (conf >= MIN_CONFIDENCE) {
-                  result.emails.push({ email, source_url: nestedUrl, confidence: conf, is_generated: false });
+                  result.emails.push({ email, source_url: nestedUrl, confidence: conf });
                 }
               }
             }
           }
         } catch { /* skip nested crawl failures silently */ }
-      }
-    }
-
-    // ── Step 8: Smart generated email fallback (marked as generated) ──
-    if (result.emails.length === 0 && (firstName || lastName)) {
-      const generated = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname);
-      for (const email of generated) {
-        if (!result.emails.some((e) => e.email === email)) {
-          result.emails.push({ email, source_url: null, confidence: 50, is_generated: true });
-        }
       }
     }
 
@@ -197,41 +184,6 @@ function buildQueries(opts: EnrichOptions, searchName: string, cleanHandle: stri
     queries.push(`${cleanHandle} email`);
   }
   return queries;
-}
-
-function generateProbableEmails(
-  firstName: string,
-  lastName: string,
-  cleanHandle: string,
-  nickname: string | undefined,
-): string[] {
-  const emails: string[] = [];
-  const f = firstName.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const l = lastName.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const clean = cleanHandle.toLowerCase().replace(/^@/, "").replace(/[^a-z0-9._-]/g, "");
-  const nick = nickname ? nickname.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9._-]/g, "") : "";
-  const domains = ["gmail.com", "outlook.com", "proton.me", "yahoo.com", "icloud.com"];
-
-  if (f && l) {
-    for (const d of domains) emails.push(`${f}.${l}@${d}`);
-    emails.push(`${f}${l}@gmail.com`);
-    emails.push(`${l}.${f}@gmail.com`);
-  }
-  if (clean && clean !== `${f}${l}` && clean !== f) {
-    emails.push(`${clean}@gmail.com`);
-    emails.push(`${clean}@outlook.com`);
-  }
-  if (nick && nick !== clean && nick !== `${f}.${l}`) {
-    emails.push(`${nick}@gmail.com`);
-    emails.push(`${nick}@proton.me`);
-  }
-  if (f && !l) {
-    emails.push(`${f}@gmail.com`);
-    emails.push(`${f}@outlook.com`);
-  }
-  if (f && l) emails.push(`${f[0]}${l}@gmail.com`);
-
-  return [...new Set(emails)];
 }
 
 function detectPlatformAlias(
@@ -273,7 +225,7 @@ function collectCrawlResults(
     if (!result.emails.some((e) => e.email === email)) {
       const { confidence: conf } = computeEmailConfidence(email, handle, name);
       if (conf >= MIN_CONFIDENCE) {
-        result.emails.push({ email, source_url: sourceUrl, confidence: conf, is_generated: false });
+        result.emails.push({ email, source_url: sourceUrl, confidence: conf });
       }
     }
   }

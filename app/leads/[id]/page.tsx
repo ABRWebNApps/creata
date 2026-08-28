@@ -221,7 +221,7 @@ export default function LeadProfilePage({
     // ── Enrichment state ──
     const [enriching, setEnriching] = useState(false);
     const [enrichResults, setEnrichResults] = useState<{
-          emails: { email: string; source_url: string | null; confidence: number; is_generated: boolean }[];
+          emails: { email: string; source_url: string | null; confidence: number }[];
           phones: { phone: string; source_url: string | null; confidence: number }[];
           aliases: { platform: string; profile_url: string }[];
       errors: string[];
@@ -258,7 +258,7 @@ export default function LeadProfilePage({
                   // Load saved enrichments from JSONB fields if available
                   if (result.lead.enriched_emails?.length > 0 || result.lead.enriched_phones?.length > 0 || result.lead.enriched_aliases?.length > 0) {
                     setEnrichResults({
-                                          emails: (result.lead.enriched_emails || []).map((e: any) => ({ ...e, is_generated: e.is_generated ?? false })),
+                                          emails: (result.lead.enriched_emails || []).map((e: any) => ({ email: e.email, source_url: e.source_url, confidence: e.confidence })),
                                           phones: result.lead.enriched_phones || [],
                                           aliases: result.lead.enriched_aliases || [],
                                           errors: [],
@@ -438,7 +438,7 @@ export default function LeadProfilePage({
     setSavingEnrich(true);
     try {
       const headers = await getAuthHeaders();
-      const emails = enrichResults.emails.map((e) => ({ email: e.email, confidence: e.confidence, source_url: e.source_url, is_generated: e.is_generated }));
+      const emails = enrichResults.emails.map((e) => ({ email: e.email, confidence: e.confidence, source_url: e.source_url }));
       const phones = enrichResults.phones.map((p) => ({ phone: p.phone }));
       const aliases = enrichResults.aliases.map((a) => ({ platform: a.platform, profile_url: a.profile_url }));
       const res = await fetch(`/api/leads/${lead.id}`, {
@@ -787,16 +787,11 @@ export default function LeadProfilePage({
                                                                                     </span>
                                                                                   </div>
                                                                                   <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                                                                                                                                                      {e.is_generated && (
-                                                                                                                                                                        <span className="text-[9px] sm:text-[10px] font-mono text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full border border-purple-100">
-                                                                                                                                                                          gen
-                                                                                                                                                                        </span>
-                                                                                                                                                                      )}
-                                                                                                                                                                      {!e.is_generated && e.source_url && (
-                                                                                                                                                                        <span className="text-[9px] sm:text-[10px] font-mono text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
-                                                                                                                                                                          found
-                                                                                                                                                                        </span>
-                                                                                                                                                                      )}
+                                                                                                                                                                        {e.source_url && (
+                                                                                                                                                                          <span className="text-[9px] sm:text-[10px] font-mono text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
+                                                                                                                                                                            found
+                                                                                                                                                                          </span>
+                                                                                                                                                                        )}
                                                                                                                                                                       <span className={`text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full ${
                                                                                                                                                                         e.confidence >= 80 ? "bg-green-100 text-green-700" :
                                                                                                                                                                         e.confidence >= 50 ? "bg-amber-100 text-amber-700" :

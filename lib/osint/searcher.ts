@@ -1,7 +1,7 @@
-/* ── Search Engine Scraper — Firecrawl-primary, free engines as opportunistic bonus ── */
-/* Firecrawl runs first as the reliable worker. Free engines (Bing, DDG, Google) run   */
-/* in parallel with 3s timeout — if any return results, great, saves a credit.          */
-/* Otherwise Firecrawl results are used.                                               */
+/* ── Search Engine Scraper — Firecrawl always, free engines supplement ── */
+/* Firecrawl runs as the primary search engine. Free engines (Bing, DDG,   */
+/* Google) run with short timeout — their results are MERGED with          */
+/* Firecrawl results for more crawl targets. Firecrawl is never skipped.   */
 
 import { buildHeaders, getFirecrawlApiKey } from "./config";
 import type { SearchResult } from "./types";
@@ -14,13 +14,11 @@ const GOOGLE_URL = "https://www.google.com/search";
 const FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v1/search";
 const FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape";
 
-/** Timeout for free search engines (they almost always fail on Vercel — don't wait long) */
 const FREE_ENGINE_TIMEOUT = 4_000;
-/** Timeout for Firecrawl (the real worker — give it enough time) */
 const FIRECRAWL_TIMEOUT = 15_000;
 
 /**
- * Firecrawl search — 1 credit. Primary worker for reliable results.
+ * Firecrawl search — 1 credit.
  */
 async function firecrawlSearch(query: string): Promise<SearchResult[]> {
   const apiKey = getFirecrawlApiKey();
@@ -92,41 +90,43 @@ export async function firecrawlScrape(url: string): Promise<string | null> {
 /**
  * Main search entry point.
  *
- * Firecrawl runs first with a generous timeout. Free engines run in parallel
- * with a short timeout — if they return results, we use those (saves a credit).
- * Otherwise Firecrawl results are used. This guarantees results while minimizing
- * credit burn.
+ * Firecrawl ALWAYS runs as primary. Free engines run in parallel with short
+ * timeout — their results are MERGED with Firecrawl results (deduped by URL).
+ * This gives more crawl targets while Firecrawl provides reliable search data.
  */
 export async function searchEngine(
   query: string,
 ): Promise<{ results: SearchResult[]; rawHtml: string }> {
-  // Start Firecrawl immediately (primary worker)
+  // Firecrawl primary
   const fcPromise = firecrawlSearch(query);
 
-  // Also run free engines with short timeout (opportunistic)
+  // Free engines — opportunistic supplement
   const freePromise = runFreeEngines(query);
 
   const [fcResults, freeResults] = await Promise.all([fcPromise, freePromise]);
 
-  // Priority: free engine results > Firecrawl results
-  // Free results save a credit when they work
-  if (freeResults.length > 0) {
-    return { results: freeResults, rawHtml: "" };
+  // Merge: Firecrawl results + any free engine URLs we don't already have
+  const seen = new Set<string>();
+  const merged: SearchResult[] = [];
+
+  for (const r of fcResults) {
+    if (!seen.has(r.url)) {
+      seen.add(r.url);
+      merged.push(r);
+    }
+  }
+  for (const r of freeResults) {
+    if (!seen.has(r.url)) {
+      seen.add(r.url);
+      merged.push(r);
+    }
   }
 
-  if (fcResults.length > 0) {
-    return {
-      results: fcResults,
-      rawHtml: fcResults.map((r) => `${r.title} ${r.snippet}`).join(" "),
-    };
-  }
+  const rawHtml = merged.map((r) => `${r.title} ${r.snippet}`).join(" ");
 
-  return { results: [], rawHtml: "" };
+  return { results: merged, rawHtml };
 }
 
-/**
- * Run free engines in parallel with short timeout.
- */
 async function runFreeEngines(query: string): Promise<SearchResult[]> {
   const attempts = await Promise.allSettled([
     tryBing(query),
@@ -136,7 +136,6 @@ async function runFreeEngines(query: string): Promise<SearchResult[]> {
     tryGoogleMobile(query),
   ]);
 
-  // Collect all results, dedup by URL
   const seen = new Set<string>();
   const all: SearchResult[] = [];
   for (const a of attempts) {
@@ -149,11 +148,9 @@ async function runFreeEngines(query: string): Promise<SearchResult[]> {
       }
     }
   }
-
   return all;
 }
 
-/** Fetch with AbortController timeout */
 async function fetchWithTimeout(
   urlOrReq: string | Request,
   opts?: RequestInit & { redirect?: RequestRedirect },
@@ -178,13 +175,9 @@ async function tryBing(query: string): Promise<SearchResult[]> {
     headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     headers["Accept-Language"] = "en-US,en;q=0.5";
     headers["Referer"] = "https://www.bing.com/";
-
     const response = await fetchWithTimeout(url, { headers, redirect: "follow" });
-    const rawHtml = await response.text();
-    return parseBingResults(rawHtml);
-  } catch {
-    return [];
-  }
+    return parseBingResults(await response.text());
+  } catch { return []; }
 }
 
 async function tryDdgHtml(query: string): Promise<SearchResult[]> {
@@ -194,13 +187,9 @@ async function tryDdgHtml(query: string): Promise<SearchResult[]> {
     headers["Origin"] = "https://duckduckgo.com";
     headers["Referer"] = "https://duckduckgo.com/";
     headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-
     const response = await fetchWithTimeout(url, { headers, redirect: "follow" });
-    const rawHtml = await response.text();
-    return parseDdgResults(rawHtml);
-  } catch {
-    return [];
-  }
+    return parseDdgResults(await response.text());
+  } catch { return []; }
 }
 
 async function tryDdgLite(query: string): Promise<SearchResult[]> {
@@ -208,18 +197,12 @@ async function tryDdgLite(query: string): Promise<SearchResult[]> {
     const headers = buildHeaders();
     headers["Content-Type"] = "application/x-www-form-urlencoded";
     headers["Referer"] = "https://lite.duckduckgo.com/lite/";
-
     const response = await fetchWithTimeout(DDG_LITE_URL, {
-      method: "POST",
-      headers,
-      body: `q=${encodeURIComponent(query)}`,
-      redirect: "follow",
+      method: "POST", headers,
+      body: `q=${encodeURIComponent(query)}`, redirect: "follow",
     });
-    const rawHtml = await response.text();
-    return parseDdgLiteResults(rawHtml);
-  } catch {
-    return [];
-  }
+    return parseDdgLiteResults(await response.text());
+  } catch { return []; }
 }
 
 async function tryGoogle(query: string): Promise<SearchResult[]> {
@@ -229,13 +212,9 @@ async function tryGoogle(query: string): Promise<SearchResult[]> {
     headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     headers["Accept-Language"] = "en-US,en;q=0.5";
     delete headers["Referer"];
-
     const response = await fetchWithTimeout(url, { headers, redirect: "follow" });
-    const rawHtml = await response.text();
-    return parseGoogleResults(rawHtml);
-  } catch {
-    return [];
-  }
+    return parseGoogleResults(await response.text());
+  } catch { return []; }
 }
 
 async function tryGoogleMobile(query: string): Promise<SearchResult[]> {
@@ -245,17 +224,12 @@ async function tryGoogleMobile(query: string): Promise<SearchResult[]> {
       "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
-      "Accept-Encoding": "gzip, deflate",
-      "DNT": "1",
+      "Accept-Encoding": "gzip, deflate", "DNT": "1",
       "Upgrade-Insecure-Requests": "1",
     };
-
     const response = await fetchWithTimeout(url, { headers, redirect: "follow" });
-    const rawHtml = await response.text();
-    return parseGoogleResults(rawHtml);
-  } catch {
-    return [];
-  }
+    return parseGoogleResults(await response.text());
+  } catch { return []; }
 }
 
 /* ================================================================
@@ -265,7 +239,6 @@ async function tryGoogleMobile(query: string): Promise<SearchResult[]> {
 function parseDdgResults(html: string): SearchResult[] {
   const results: SearchResult[] = [];
   const seen = new Set<string>();
-
   const blockRe = /<div[^>]*class="[^"]*\bresults_links_deep\b[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
   let match: RegExpExecArray | null;
   while ((match = blockRe.exec(html)) !== null) {
@@ -281,7 +254,6 @@ function parseDdgResults(html: string): SearchResult[] {
     const snippet = snippetMatch ? stripTags(snippetMatch[1]) : "";
     results.push({ url, title, snippet });
   }
-
   if (results.length < 3) {
     const fallbackRe = /uddg=([^"&]+)/g;
     while ((match = fallbackRe.exec(html)) !== null) {
@@ -293,16 +265,13 @@ function parseDdgResults(html: string): SearchResult[] {
       } catch { /* skip */ }
     }
   }
-
   return results.slice(0, 10);
 }
 
 function decodeDdgUrl(raw: string): string {
   if (raw.includes("duckduckgo.com/l/")) {
     const uddgMatch = raw.match(/uddg=([^&]+)/);
-    if (uddgMatch) {
-      try { return decodeURIComponent(uddgMatch[1]); } catch { /* skip */ }
-    }
+    if (uddgMatch) { try { return decodeURIComponent(uddgMatch[1]); } catch { /* skip */ } }
   }
   return raw;
 }
@@ -383,14 +352,7 @@ function parseBingResults(html: string): SearchResult[] {
 }
 
 function stripTags(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 }
