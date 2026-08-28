@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Run enrichment
-    // Return progress immediately by starting enrichment in background
     const result = await enrichLead({
       leadId: lead.id,
       leadNickname: lead.nickname,
@@ -63,14 +62,15 @@ export async function POST(request: NextRequest) {
       maxCrawlPerQuery: MAX_CRAWL_PER_QUERY,
     });
 
-    // 5. Return results
+    // 5. Return results — surface only real configuration errors, not
+    //    expected crawl/search failures (they're silent now in the engine)
     return NextResponse.json({
       success: true,
       data: {
         emails: result.emails,
         phones: result.phones,
         aliases: result.aliases,
-        errors: result.errors.slice(0, 5),
+        errors: result.errors.slice(0, 3),
         total_errors: result.errors.length,
       },
     });

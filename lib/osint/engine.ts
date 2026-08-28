@@ -51,7 +51,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     // ── Step 1: Fast-path bio extraction ──
     const bioEmails = extractEmailsFromBio(opts.leadBio);
     for (const email of bioEmails) {
-      const conf = Math.max(BIO_REGEX_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
+      const conf = Math.max(BIO_REGEX_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName).confidence);
       result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
     }
 
@@ -76,7 +76,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     // ── Step 4: Process search results ──
     for (const srPromise of searchResults) {
       if (srPromise.status !== "fulfilled") {
-        result.errors.push(`Search failed: ${srPromise.reason?.message || "unknown"}`);
+        // Don't surface engine failures to user — they're expected in serverless
         continue;
       }
 
@@ -85,7 +85,7 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       // Capture snippet-level emails
       for (const email of snippetEmails) {
         if (!result.emails.some((e) => e.email === email)) {
-          const conf = computeEmailConfidence(email, opts.leadHandle, searchName);
+          const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
           if (conf >= MIN_CONFIDENCE) {
             result.emails.push({ email, source_url: null, confidence: conf, is_generated: false });
           }
@@ -105,82 +105,66 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
 
       // ── Step 5: Crawl found search-result URLs ──
       for (const url of urlsToCrawl) {
-        try {
-          const crawl = await crawlPage(url);
-          collectCrawlResults(crawl, url, result, opts.leadHandle, searchName);
-        } catch (err) {
-          result.errors.push(`Crawl failed for ${url.slice(0, 60)}: ${(err as Error).message}`);
-        }
+        const crawl = await crawlPage(url);
+        collectCrawlResults(crawl, url, result, opts.leadHandle, searchName);
       }
     }
 
     // ── Step 6: Crawl the lead's own profile page ──
     if (CRAWL_OWN_PROFILE && opts.leadProfileUrl) {
-      try {
-        const ownCrawl = await crawlPage(opts.leadProfileUrl);
-        for (const email of ownCrawl.emails) {
-          if (!result.emails.some((e) => e.email === email)) {
-            const conf = Math.max(OWN_PROFILE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
-            result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: conf, is_generated: false });
-          }
+      const ownCrawl = await crawlPage(opts.leadProfileUrl);
+      for (const email of ownCrawl.emails) {
+        if (!result.emails.some((e) => e.email === email)) {
+          const conf = Math.max(OWN_PROFILE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName).confidence);
+          result.emails.push({ email, source_url: opts.leadProfileUrl, confidence: conf, is_generated: false });
         }
-        for (const phone of ownCrawl.phones) {
-          if (!result.phones.some((p) => p.phone === phone)) {
-            result.phones.push({ phone, source_url: opts.leadProfileUrl, confidence: OWN_PROFILE_CONFIDENCE });
-          }
+      }
+      for (const phone of ownCrawl.phones) {
+        if (!result.phones.some((p) => p.phone === phone)) {
+          result.phones.push({ phone, source_url: opts.leadProfileUrl, confidence: OWN_PROFILE_CONFIDENCE });
         }
-      } catch (err) {
-        result.errors.push(`Own profile crawl failed: ${(err as Error).message}`);
       }
     }
 
     // ── Step 7: Crawl all discovered cross-platform aliases ──
-    // These are real profile pages (LinkedIn, GitHub, website, etc.)
-    // that often contain contact info or email links
     const aliasUrlsToCrawl = result.aliases
       .map((a) => a.profile_url)
-      .filter((url) => url !== opts.leadProfileUrl); // skip own profile (already crawled)
+      .filter((url) => url !== opts.leadProfileUrl);
 
     for (const url of aliasUrlsToCrawl) {
-      try {
-        const crawl = await crawlPage(url);
-        // Only add email (aliases already in result)
-        for (const email of crawl.emails) {
-          if (!result.emails.some((e) => e.email === email)) {
-            const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
-            if (conf >= MIN_CONFIDENCE) {
-              result.emails.push({ email, source_url: url, confidence: conf, is_generated: false });
-            }
+      const crawl = await crawlPage(url);
+      for (const email of crawl.emails) {
+        if (!result.emails.some((e) => e.email === email)) {
+          const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
+          if (conf >= MIN_CONFIDENCE) {
+            result.emails.push({ email, source_url: url, confidence: conf, is_generated: false });
           }
         }
-        for (const phone of crawl.phones) {
-          if (!result.phones.some((p) => p.phone === phone)) {
-            result.phones.push({ phone, source_url: url, confidence: CRAWLED_PAGE_CONFIDENCE });
-          }
+      }
+      for (const phone of crawl.phones) {
+        if (!result.phones.some((p) => p.phone === phone)) {
+          result.phones.push({ phone, source_url: url, confidence: CRAWLED_PAGE_CONFIDENCE });
         }
-        // Discovered alias brought new URLs? Crawl a few of those too
-        for (const nestedUrl of crawl.urls.slice(0, 3)) {
-          try {
-            if (nestedUrl.includes(url.split("/")[2] || url)) {
-              const nestedCrawl = await crawlPage(nestedUrl);
-              for (const email of nestedCrawl.emails) {
-                if (!result.emails.some((e) => e.email === email)) {
-                  const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, opts.leadHandle, searchName));
-                  if (conf >= MIN_CONFIDENCE) {
-                    result.emails.push({ email, source_url: nestedUrl, confidence: conf, is_generated: false });
-                  }
+      }
+      // Discovered alias brought new URLs? Crawl a few of those too
+      for (const nestedUrl of crawl.urls.slice(0, 3)) {
+        try {
+          if (nestedUrl.includes(url.split("/")[2] || url)) {
+            const nestedCrawl = await crawlPage(nestedUrl);
+            for (const email of nestedCrawl.emails) {
+              if (!result.emails.some((e) => e.email === email)) {
+                const { confidence: conf } = computeEmailConfidence(email, opts.leadHandle, searchName);
+                if (conf >= MIN_CONFIDENCE) {
+                  result.emails.push({ email, source_url: nestedUrl, confidence: conf, is_generated: false });
                 }
               }
             }
-          } catch { }
-        }
-      } catch (err) {
-        result.errors.push(`Alias crawl failed for ${url.slice(0, 60)}: ${(err as Error).message}`);
+          }
+        } catch { /* skip nested crawl failures silently */ }
       }
     }
 
     // ── Step 8: Smart generated email fallback (marked as generated) ──
-    // Only fires if NO real emails found at all
     if (result.emails.length === 0 && (firstName || lastName)) {
       const generated = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname);
       for (const email of generated) {
@@ -287,7 +271,7 @@ function collectCrawlResults(
 ) {
   for (const email of crawl.emails) {
     if (!result.emails.some((e) => e.email === email)) {
-      const conf = Math.max(CRAWLED_PAGE_CONFIDENCE, computeEmailConfidence(email, handle, name));
+      const { confidence: conf } = computeEmailConfidence(email, handle, name);
       if (conf >= MIN_CONFIDENCE) {
         result.emails.push({ email, source_url: sourceUrl, confidence: conf, is_generated: false });
       }

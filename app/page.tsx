@@ -13,6 +13,7 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
 import InfiniteTestimonials from "@/components/InfiniteTestimonials";
 import CurtainSection from "@/components/CurtainSection";
+import { motion } from "motion/react";
 
 /* ── Scroll-triggered animation hook (bidirectional — Motion-style) ── */
 function useScrollAnimation() {
@@ -125,15 +126,44 @@ export default function Home() {
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-8">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-700 mb-6 animate-fade-in shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 animate-ping opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-              </span>
-              <span className="animate-shimmer" style={{ backgroundImage: "linear-gradient(90deg, transparent, rgba(37,99,235,0.12), transparent)", backgroundSize: "200% auto", WebkitBackgroundClip: "text" }}>
-                Live from TikTok, Instagram, X, LinkedIn & Facebook
-              </span>
+            {/* Shooting star animation */}
+            <div className="relative h-8 mb-6 overflow-hidden">
+              <motion.div
+                className="absolute top-0 left-0 w-0.5 h-0.5 rounded-full bg-white"
+                style={{ boxShadow: "0 0 4px 2px rgba(59,130,246,0.6), 0 0 8px 4px rgba(59,130,246,0.3)" }}
+                animate={{
+                  x: [0, 400],
+                  y: [0, 120],
+                  opacity: [0, 1, 1, 0],
+                  scale: [0, 1.5, 1.5, 0],
+                }}
+                transition={{
+                  duration: 1.8,
+                  repeat: Infinity,
+                  repeatDelay: 3.5,
+                  ease: "easeOut",
+                  times: [0, 0.15, 0.6, 1],
+                }}
+              />
+              <motion.div
+                className="absolute top-0 left-0 h-px"
+                style={{
+                  width: 80,
+                  background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.8), transparent)",
+                }}
+                animate={{
+                  x: [0, 400],
+                  y: [0, 120],
+                  opacity: [0, 0.8, 0.8, 0],
+                }}
+                transition={{
+                  duration: 1.8,
+                  repeat: Infinity,
+                  repeatDelay: 3.5,
+                  ease: "easeOut",
+                  times: [0, 0.15, 0.6, 1],
+                }}
+              />
             </div>
 
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-4 sm:mb-5">

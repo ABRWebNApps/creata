@@ -271,6 +271,7 @@ const FREE_DOMAINS = new Set([
 /**
  * Score an email's relevance to a specific person (by handle and name).
  * Returns 0–100: higher means more likely the email belongs to this person.
+ * Also returns a boolean `matchesHandle` for UI filtering.
  *
  * Rules:
  *  - Custom domain + handle match in local part = 95 (e.g., drchijioke@drchijiokeadimike.com)
@@ -283,69 +284,41 @@ export function computeEmailConfidence(
   email: string,
   handle: string,
   name: string,
-): number {
+): { confidence: number; matchesHandle: boolean } {
   const [local, domain] = email.toLowerCase().split("@");
-  const handleLower = handle.toLowerCase();
-  const nameLower = name.toLowerCase();
-  const isFree = FREE_DOMAINS.has(domain);
+  const handleLower = handle.toLowerCase().replace(/^@/, "");
+  const nameLower = name.toLowerCase().replace(/^@/, "");
 
-  // Handle matches local part exactly or partially
+  // Check local part against handle and name
   const handleInLocal = local.includes(handleLower);
+  // Also check if handle appears as a word boundary (preferred)
+  const handleWordMatch = new RegExp(`\\b${escapeRegex(handleLower)}\\b`).test(local);
+
+  const nameWords = nameLower.split(/\s+/).filter(Boolean);
+  const nameWordMatch = nameWords.some((w) => w.length > 1 && local.includes(w));
   const nameInLocal = nameLower !== handleLower && local.includes(nameLower);
+
+  const matchesHandle = handleWordMatch || handleInLocal || nameWordMatch || nameInLocal;
+
+  const isFree = FREE_DOMAINS.has(domain);
 
   // Custom domain (not free provider) suggests professional/owned email
   if (!isFree) {
-    if (handleInLocal) return 95;
-    if (nameInLocal) return 80;
-    return 40;
+    if (handleInLocal) return { confidence: 95, matchesHandle: true };
+    if (nameInLocal) return { confidence: 80, matchesHandle: true };
+    return { confidence: 40, matchesHandle: false };
   }
 
-  // Free provider (gmail, outlook, etc.) — still real but weaker signal
-  if (handleInLocal) return 70;
-  if (nameInLocal) return 50;
-  return 20;
+  // Free provider (gmail, outlook, etc.)
+  if (handleInLocal) return { confidence: 70, matchesHandle: true };
+  if (nameInLocal) return { confidence: 50, matchesHandle: true };
+  return { confidence: 20, matchesHandle: false };
 }
 
-/**
- * Generate probable email addresses for a person based on their handle and name.
- * These are common patterns people use for their email addresses.
- * Returns a map of email → confidence score.
- */
-export function generateProbableEmails(
-  handle: string,
-  name: string,
-): Map<string, number> {
-  const results = new Map<string, number>();
-  const h = handle.toLowerCase().replace(/^@/, "");
-  const nameParts = name.toLowerCase().replace(/^@/, "").split(/\s+/);
-  const first = nameParts[0] || h;
-  const last = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
-
-  const patterns: Array<{ email: string; conf: number }> = [];
-
-  // Common free providers
-  const providers = ["gmail.com", "outlook.com", "yahoo.com", "hotmail.com", "icloud.com", "protonmail.com"];
-
-  for (const p of providers) {
-    // handle@gmail.com (most common for content creators)
-    patterns.push({ email: `${h}@${p}`, conf: 70 });
-    // handle+name@gmail.com
-    if (last) patterns.push({ email: `${h}.${last}@${p}`, conf: 50 });
-  }
-
-  // firstname.lastname@gmail.com
-  if (first && last && first !== last) {
-    patterns.push({ email: `${first}.${last}@gmail.com`, conf: 60 });
-    patterns.push({ email: `${first}${last}@gmail.com`, conf: 55 });
-    patterns.push({ email: `${first}_${last}@gmail.com`, conf: 50 });
-    patterns.push({ email: `${first}@outlook.com`, conf: 40 });
-  }
-
-  for (const p of patterns) {
-    if (!results.has(p.email)) {
-      results.set(p.email, p.conf);
-    }
-  }
-
-  return results;
+/** Safe regex escape for user-provided strings */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+// NOTE: generateProbableEmails is implemented in engine.ts (the orchestrator uses it).
+// The extractor module only provides extraction + confidence scoring — no generation.
