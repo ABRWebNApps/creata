@@ -7,6 +7,12 @@ const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const OBFUSCATED_EMAIL_RE =
   /[a-zA-Z0-9._%+-]+\s*\[?at\]?\s*[a-zA-Z0-9.-]+\s*\[?dot\]?\s*[a-zA-Z]{2,}/gi;
 
+/** Email in text patterns — catches "email: user@domain", "📧 user@domain", etc */
+const EMAIL_PREFIX_RE = /(?:email|e-mail|mail|📧|✉️)[:\s]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
+
+/** Name-based email in plain text — catches "email user at domain dot com" */
+const NAME_EMAIL_RE = /(?:email|contact|reach)[:\s]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+at\s+([a-zA-Z0-9.-]+)\s+dot\s+([a-zA-Z]{2,})/gi;
+
 /** URL regex for extracting links from HTML/text */
 const URL_RE = /(https?:\/\/)[a-zA-Z0-9.\-]+(?:\.[a-zA-Z]{2,11})(?:\/[^\s"'<>]*)?/g;
 
@@ -106,7 +112,6 @@ export function extractEmails(
   // Obfuscated emails (name [at] domain [dot] com)
   const obfuscatedMatches = text.match(OBFUSCATED_EMAIL_RE) || [];
   for (const raw of obfuscatedMatches) {
-    // Convert [at] → @, [dot] → .
     const deobfuscated = raw
       .toLowerCase()
       .replace(/\s*\[?at\]?\s*/g, "@")
@@ -115,6 +120,34 @@ export function extractEmails(
       .replace(/^[^a-zA-Z0-9]+/, "");
     if (deobfuscated.includes("@")) {
       const cleaned = cleanEmail(deobfuscated);
+      if (cleaned && !dedup.has(cleaned)) {
+        dedup.add(cleaned);
+        result.push(cleaned);
+      }
+    }
+  }
+
+  // Email prefix patterns (email: user@domain.com, 📧 user@domain.com)
+  const prefixMatches = text.match(EMAIL_PREFIX_RE) || [];
+  for (const raw of prefixMatches) {
+    const email = raw.replace(/^(?:email|e-mail|mail|📧|✉️)[:\s]*/i, "").trim();
+    const cleaned = cleanEmail(email);
+    if (cleaned && !dedup.has(cleaned)) {
+      dedup.add(cleaned);
+      result.push(cleaned);
+    }
+  }
+
+  // Name-based obfuscated: "email firstname lastname at domain dot com"
+  const nameEmailMatches = text.match(NAME_EMAIL_RE) || [];
+  for (const raw of nameEmailMatches) {
+    const parts = raw.match(/(?:email|contact|reach)[:\s]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+at\s+([a-zA-Z0-9.-]+)\s+dot\s+([a-zA-Z]{2,})/i);
+    if (parts) {
+      const localPart = parts[1].toLowerCase().replace(/\s+/g, ".");
+      const domain = parts[2].toLowerCase();
+      const tld = parts[3].toLowerCase();
+      const constructed = `${localPart}@${domain}.${tld}`;
+      const cleaned = cleanEmail(constructed);
       if (cleaned && !dedup.has(cleaned)) {
         dedup.add(cleaned);
         result.push(cleaned);

@@ -1,11 +1,11 @@
-/* ── Page Crawler — Retry-resistant fetch + Firecrawl fallback ── */
-/* No browser needed. Retries 3x with different UAs, then falls   */
-/* back to Firecrawl scrape if direct fetch keeps failing.        */
+/* ── Page Crawler — Firecrawl-scrape primary, direct fetch fallback ── */
+/* Firecrawl scrape gets us the page content reliably (bypasses Vercel IP  */
+/* blocks). Direct fetch tried first (no credit cost), Firecrawl on fail.   */
 
-import { buildHeaders, FETCH_TIMEOUT, MAX_PAGES_PER_CYCLE, CRAWL_RETRY_COUNT, CRAWL_RETRY_DELAY_MS, getFirecrawlApiKey } from "./config";
+import { buildHeaders, FETCH_TIMEOUT, getFirecrawlApiKey } from "./config";
 import { extractEmails, extractPhones, extractUrls } from "./extractor";
 import { firecrawlScrape } from "./searcher";
-import type { CrawlResult, SearchResult } from "./types";
+import type { CrawlResult } from "./types";
 
 /** URL normalization */
 function normalizeUrl(url: string): string {
@@ -35,51 +35,58 @@ function shouldSkipUrl(url: string): boolean {
 }
 
 /**
- * Retry fetch — up to CRAWL_RETRY_COUNT attempts with different UAs
- * and exponential backoff between attempts.
+ * Crawl a single page.
+ * Strategy: try direct fetch first (free), Firecrawl scrape on failure (1 credit).
+ * Firecrawl scrape is also used for high-value pages (LinkedIn, contact pages)
+ * even if direct fetch succeeds, to get more complete content.
  */
-async function fetchWithRetry(url: string): Promise<Response> {
-  let lastError: Error | null = null;
+export async function crawlPage(url: string): Promise<CrawlResult> {
+  if (shouldSkipUrl(url)) {
+    return { emails: [], phones: [], urls: [] };
+  }
 
-  for (let attempt = 0; attempt < CRAWL_RETRY_COUNT; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  const normalizedUrl = normalizeUrl(url);
+  let content: string | null = null;
 
-      // Rotate UA on each retry
-      const headers = buildHeaders();
+  // Strategy 1: Direct fetch (free, no credit cost)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    const response = await fetch(normalizedUrl, {
+      headers: buildHeaders(),
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    if (response.ok) {
+      content = await response.text();
+    }
+  } catch {
+    // fetch failed, fall through to Firecrawl
+  }
 
-      const response = await fetch(normalizeUrl(url), {
-        headers,
-        signal: controller.signal,
-        redirect: "follow",
-      });
-      clearTimeout(timeout);
-      return response;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = CRAWL_RETRY_DELAY_MS * Math.pow(2, attempt);
-      await new Promise((r) => setTimeout(r, delay));
+  // Strategy 2: Firecrawl scrape (1 credit, but reliable)
+  // Also use Firecrawl for social/contact pages even if fetch worked —
+  // Firecrawl renders JS content and gets the full page, not just initial HTML
+  if (!content || isSocialOrContactUrl(normalizedUrl)) {
+    const fcContent = await firecrawlScrape(normalizedUrl);
+    if (fcContent) {
+      content = fcContent; // Firecrawl markdown often has MORE usable text than raw HTML
     }
   }
 
-  throw lastError || new Error(`Failed to fetch ${url} after ${CRAWL_RETRY_COUNT} attempts`);
-}
+  if (!content) {
+    return { emails: [], phones: [], urls: [] };
+  }
 
-/**
- * Extract contacts from raw text (HTML or markdown).
- */
-function extractContacts(
-  text: string,
-): { emails: string[]; phones: string[]; urls: string[] } {
+  // Extract contacts from content
   const emailDedup = new Set<string>();
-  const emails = extractEmails(text, emailDedup).slice(0, 10);
-  const phones = extractPhones(text).slice(0, 5);
-  const urls = extractUrls(text).slice(0, 10);
+  const emails = extractEmails(content, emailDedup).slice(0, 10);
+  const phones = extractPhones(content).slice(0, 5);
+  const urls = extractUrls(content).slice(0, 10);
 
-  // Also try visible text for phone regex (stripped of HTML tags)
-  const plainText = text.replace(/<[^>]*>/g, " ");
+  // Also try plain text for phone regex (strip HTML tags)
+  const plainText = content.replace(/<[^>]*>/g, " ");
   const textPhones = extractPhones(plainText);
   for (const p of textPhones) {
     if (!phones.includes(p)) phones.push(p);
@@ -93,54 +100,21 @@ function extractContacts(
 }
 
 /**
- * Crawl a single page — tries 3x with fetch, falls back to
- * Firecrawl scrape if all fetch attempts fail.
+ * Check if a URL is a social media or contact page where JS rendering
+ * matters — always use Firecrawl for these.
  */
-export async function crawlPage(url: string): Promise<CrawlResult> {
-  if (shouldSkipUrl(url)) {
-    return { emails: [], phones: [], urls: [] };
-  }
-
-  // Strategy 1: Direct fetch with retry
-  try {
-    const response = await fetchWithRetry(url);
-    const html = await response.text();
-    const { emails, phones, urls } = extractContacts(html);
-    return { emails, phones, urls };
-  } catch {
-    // fetch failed — do NOT log, do NOT surface as user-facing error
-  }
-
-  // Strategy 2: Firecrawl scrape fallback (1 credit, only used when fetch fails)
-  const fcApiKey = getFirecrawlApiKey();
-  if (fcApiKey) {
-    const markdown = await firecrawlScrape(url);
-    if (markdown) {
-      const { emails, phones, urls } = extractContacts(markdown);
-      return { emails, phones, urls };
-    }
-  }
-
-  return { emails: [], phones: [], urls: [] };
-}
-
-/**
- * Crawl multiple pages from search results sequentially.
- */
-export async function crawlSearchResults(
-  searchResults: SearchResult[],
-): Promise<Map<string, CrawlResult>> {
-  const results = new Map<string, CrawlResult>();
-  const limit = Math.min(searchResults.length, MAX_PAGES_PER_CYCLE);
-
-  for (let i = 0; i < limit; i++) {
-    const sr = searchResults[i];
-    const cr = await crawlPage(sr.url);
-    results.set(sr.url, cr);
-    if (i < limit - 1) {
-      await new Promise((r) => setTimeout(r, 500));
-    }
-  }
-
-  return results;
+function isSocialOrContactUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  const patterns = [
+    "linkedin.com/in/",
+    "linkedin.com/company/",
+    "instagram.com/",
+    "twitter.com/",
+    "facebook.com/",
+    "contact",
+    "/about",
+    "/team",
+    "/staff",
+  ];
+  return patterns.some((p) => lower.includes(p));
 }
