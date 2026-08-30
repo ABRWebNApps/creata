@@ -163,7 +163,7 @@ function PricingContent() {
       id: "free",
       emoji: "🎁",
       name: "One Free Rip",
-      tagline: "Get a taste — one free search, see if Creata's your vibe",
+      tagline: "Get a taste — one free search, see if Kreata's your vibe",
       price: 0,
       runs: 1,
       features: PLAN_CONFIGS.free.features,
@@ -367,7 +367,7 @@ function PricingContent() {
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-100 py-8">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-sm text-gray-400">Creata — AI-native lead generation</p>
+          <p className="text-sm text-gray-400">Kreata — AI-native lead generation</p>
           <p className="text-sm text-gray-400">
             &copy; {new Date().getFullYear()}
           </p>

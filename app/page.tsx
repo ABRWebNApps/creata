@@ -176,7 +176,7 @@ export default function Home() {
               in seconds, not weeks.
             </h1>
             <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2 sm:px-0">
-              Creata turns any idea into a pipeline of real people who want what you're selling — filtered by platform, niche, and location. No spreadsheets. No manual scrolling.
+              Kreata turns any idea into a pipeline of real people who want what you're selling — filtered by platform, niche, and location. No spreadsheets. No manual scrolling.
             </p>
           </div>
 
@@ -520,7 +520,7 @@ export default function Home() {
       <footer className="border-t border-black/[0.06] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
-            Creata — AI-native lead generation for GTM teams
+            Kreata — AI-native lead generation for GTM teams
           </p>
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()}

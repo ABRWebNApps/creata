@@ -35,7 +35,7 @@ export default function Nav() {
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-foreground">
-            Creata
+            Kreata
           </span>
         </Link>
 
@@ -132,7 +132,7 @@ export default function Nav() {
                   <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
                     <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span>Creata</span>
+                  <span>Kreata</span>
                 </SheetTitle>
               </SheetHeader>
               <Separator />
