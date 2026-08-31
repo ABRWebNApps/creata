@@ -29,6 +29,31 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
   const firstName = nameParts[0] || searchName;
   const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
 
+  // Extract contextual keywords from bio if none provided
+  let keywords = opts.leadKeywords || [];
+  if (keywords.length === 0 && opts.leadBio) {
+    const bioLower = opts.leadBio.toLowerCase();
+    const nichePatterns: [RegExp, string][] = [
+      [/\b(real\s*estate|property|housing)/i, 'real estate'],
+      [/\b(coach|consultant|mentor|advisor)/i, 'consultant'],
+      [/\b(marketer|growth|sales|gtm)/i, 'marketing'],
+      [/\b(crypto|web3|blockchain)/i, 'crypto'],
+      [/\b(fintech|finance|invest|trading)/i, 'finance'],
+      [/\b(saas|b2b|enterprise)/i, 'saas'],
+      [/\b(health|wellness|fitness|nutrition)/i, 'wellness'],
+      [/\b(founder|ceo|owner|entrepreneur)/i, 'entrepreneur'],
+      [/\b(developer|engineer|programmer)/i, 'developer'],
+      [/\b(designer|artist|photographer)/i, 'creative'],
+      [/\b(lawyer|legal|attorney)/i, 'legal'],
+      [/\b(agency|freelancer|freelance)/i, 'agency'],
+    ];
+    for (const [pattern, label] of nichePatterns) {
+      if (pattern.test(bioLower)) {
+        keywords.push(label);
+      }
+    }
+  }
+
   try {
     // ── Step 1: Bio fast-path ──
     const bioEmails = extractEmailsFromBio(opts.leadBio);
@@ -48,6 +73,16 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     ];
     if (cleanHandle !== searchName.toLowerCase().replace(/\s/g, "")) {
       smartQueries.push(`${cleanHandle} email`);
+    }
+
+    // Add keyword-augmented queries for better niche targeting
+    for (const kw of keywords) {
+      if (kw.trim()) {
+        smartQueries.push(`${searchName} ${kw}`);
+        if (cleanHandle !== searchName.toLowerCase().replace(/\s/g, '')) {
+          smartQueries.push(`${cleanHandle} ${kw}`);
+        }
+      }
     }
 
     const searchResponses = await Promise.allSettled(

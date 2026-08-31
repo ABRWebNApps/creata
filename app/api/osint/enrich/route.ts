@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     });
     const { data: lead, error: loadError } = await adminClient
       .from("saved_leads")
-      .select("id, handle, nickname, platform, profile_url, bio, user_id")
+      .select("id, handle, nickname, platform, profile_url, bio, tags, pain_points, user_id")
       .eq("id", leadId)
       .single();
 
@@ -51,6 +51,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Extract contextual keywords from bio + stored tags/pain_points
+    const leadKeywords: string[] = [];
+    if (lead.bio) {
+      const bioLower = lead.bio.toLowerCase();
+      const nichePatterns: [RegExp, string][] = [
+        [/\b(real\s*estate|property|housing)/i, 'real estate'],
+        [/\b(coach|consultant|mentor|advisor)/i, 'consultant'],
+        [/\b(marketer|growth|sales|gtm)/i, 'marketing'],
+        [/\b(crypto|web3|blockchain)/i, 'crypto'],
+        [/\b(fintech|finance|invest|trading)/i, 'finance'],
+        [/\b(saas|b2b|enterprise)/i, 'saas'],
+        [/\b(health|wellness|fitness|nutrition)/i, 'wellness'],
+        [/\b(founder|ceo|owner|entrepreneur)/i, 'entrepreneur'],
+        [/\b(developer|engineer|programmer)/i, 'developer'],
+        [/\b(designer|artist|photographer)/i, 'creative'],
+        [/\b(lawyer|legal|attorney)/i, 'legal'],
+        [/\b(agency|freelancer|freelance)/i, 'agency'],
+      ];
+      for (const [pattern, label] of nichePatterns) {
+        if (pattern.test(bioLower)) {
+          leadKeywords.push(label);
+        }
+      }
+    }
+    // Add tags if present
+    if (lead.tags && Array.isArray(lead.tags)) {
+      for (const tag of lead.tags) {
+        if (typeof tag === 'string' && !leadKeywords.includes(tag.toLowerCase())) {
+          leadKeywords.push(tag);
+        }
+      }
+    }
+    // Add pain_points keywords if present
+    if (lead.pain_points && Array.isArray(lead.pain_points)) {
+      for (const pp of lead.pain_points) {
+        if (typeof pp === 'string') {
+          // Extract key noun phrases from pain points
+          const words = pp.split(/\s+/).filter(w => w.length > 3).slice(0, 3);
+          for (const w of words) {
+            const wl = w.toLowerCase().replace(/[^a-z]/g, '');
+            if (wl && !leadKeywords.includes(wl)) leadKeywords.push(wl);
+          }
+        }
+      }
+    }
+
     // 4. Run enrichment
     const result = await enrichLead({
       leadId: lead.id,
@@ -59,6 +105,7 @@ export async function POST(request: NextRequest) {
       leadPlatform: lead.platform,
       leadProfileUrl: lead.profile_url,
       leadBio: lead.bio,
+      leadKeywords,
       maxCrawlPerQuery: MAX_CRAWL_PER_QUERY,
     });
 

@@ -124,14 +124,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Filter by follower range BEFORE profile fetches
     let filtered = Array.from(uniqueHandles.values());
-    if (minFollowers !== undefined && minFollowers !== null) {
-      filtered = filtered.filter(e => e.follower_count >= minFollowers);
-    }
-    if (maxFollowers !== undefined && maxFollowers !== null) {
-      filtered = filtered.filter(e => e.follower_count <= maxFollowers);
-    }
+        // Follower filter applied AFTER profile fetch for accuracy
 
     // Sort by follower count — prioritize mid-tier (1k-50k) over mega-accounts
     const toFetch = filtered.slice(0, cap);
@@ -187,8 +181,11 @@ export async function POST(request: NextRequest) {
 
             const score = calcScore(stats.followerCount, engagementRate, email !== null);
 
-            creators.push({
-              handle: user.uniqueId,
+            if (minFollowers !== undefined && minFollowers !== null && stats.followerCount < minFollowers) continue;
+                        if (maxFollowers !== undefined && maxFollowers !== null && stats.followerCount > maxFollowers) continue;
+
+                        creators.push({
+                          handle: user.uniqueId,
               nickname: user.nickname,
               platform: "tiktok",
               profile_url: `https://tiktok.com/@${user.uniqueId}`,
@@ -244,9 +241,11 @@ export async function POST(request: NextRequest) {
 
 
     // Append remaining (non-fetched) leads
-    for (const entry of rest) {
-      const followerCount = entry.follower_count || 0;
-      const estEngagement = followerCount > 100000
+        for (const entry of rest) {
+          const followerCount = entry.follower_count || 0;
+          if (minFollowers !== undefined && minFollowers !== null && followerCount < minFollowers) continue;
+          if (maxFollowers !== undefined && maxFollowers !== null && followerCount > maxFollowers) continue;
+          const estEngagement = followerCount > 100000
         ? parseFloat((Math.random() * 2 + 1).toFixed(2))
         : followerCount > 10000
         ? parseFloat((Math.random() * 3 + 2).toFixed(2))

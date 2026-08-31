@@ -190,6 +190,10 @@ export async function POST(request: NextRequest) {
         ? parseFloat(Math.min(likeCount / 10, 10).toFixed(2))
         : 1.0;
 
+      const followerCount = entry.basicInfo.followers_count || 0;
+      if (minFollowers !== undefined && minFollowers !== null && followerCount < minFollowers) continue;
+      if (maxFollowers !== undefined && maxFollowers !== null && followerCount > maxFollowers) continue;
+
       creators.push({
         handle: entry.username,
         nickname: entry.basicInfo.full_name || entry.username,

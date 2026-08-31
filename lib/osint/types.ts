@@ -28,6 +28,8 @@ export interface EnrichOptions {
   maxCrawlPerQuery?: number;
   /** Mark emails/phones as verified if found on the lead's own profile */
   ownProfileIsVerified?: boolean;
+  /** Contextual keywords extracted from bio / tags / pain_points for better niche targeting */
+  leadKeywords?: string[];
 }
 
 /** Dedup query record from osint_queries */
