@@ -8,35 +8,45 @@ export function suggestPainPoints(bio: string | null): string[] {
   ];
   const text = bio.toLowerCase();
   const points: string[] = [];
+  const phrase = (keywords: string[], label: string): string => {
+    const sents = bio.split(/[.!\n]/).map(s => s.trim()).filter(Boolean);
+    for (const s of sents) {
+      const lower = s.toLowerCase();
+      for (const kw of keywords) {
+        if (lower.includes(kw)) {
+          const snippet = s.slice(0, 50).trim();
+          return `Bio flags as ${label}: "${snippet}"`;
+        }
+      }
+    }
+    return `Bio signals ${label} focus`;
+  };
 
   if (text.includes("market") || text.includes("brand") || text.includes("growth") || text.includes("scale"))
-    points.push("Struggling to scale reach or engagement in a crowded market");
+    points.push(phrase(["market", "brand", "growth"], "growth/marketing"));
   if (text.includes("financ") || text.includes("invest") || text.includes("wealth") || text.includes("money"))
-    points.push("Uncertain about investment strategies in the current economy");
+    points.push(phrase(["financ", "invest", "wealth"], "finance/investing"));
   if (text.includes("tech") || text.includes("startup") || text.includes("founder") || text.includes("saas"))
-    points.push("Customer acquisition and retention challenges");
+    points.push(phrase(["tech", "startup", "founder"], "tech/startup"));
   if (text.includes("health") || text.includes("wellness") || text.includes("fitness") || text.includes("nutrition"))
-    points.push("Overwhelmed by conflicting health advice — needs trusted guidance");
+    points.push(phrase(["health", "wellness", "fitness"], "health/wellness"));
   if (text.includes("career") || text.includes("job") || text.includes("hire") || text.includes("recruit"))
-    points.push("Frustrated with traditional career growth or hiring processes");
+    points.push(phrase(["career", "job", "hire"], "career/hiring"));
   if (text.includes("content") || text.includes("social") || text.includes("influencer"))
-    points.push("Content fatigue — difficulty standing out in their niche");
+    points.push(phrase(["content", "social", "influencer"], "content creation"));
   if (text.includes("coach") || text.includes("consult") || text.includes("mentor"))
-    points.push("Difficulty converting followers into paying clients");
-  if (text.includes("b2b") || text.includes("enterprise") || text.includes("business") || text.includes("ceo"))
-    points.push("Struggling to generate qualified B2B leads and close deals");
+    points.push(phrase(["coach", "consult", "mentor"], "coaching/consulting"));
+  if (text.includes("b2b") || text.includes("enterprise") || text.includes("ceo"))
+    points.push(phrase(["b2b", "enterprise"], "B2B/enterprise"));
   if (text.includes("product") || text.includes("ecommerc") || text.includes("shop") || text.includes("store"))
-    points.push("Need help with customer acquisition and conversion optimization");
-  if (text.includes("real esta") || text.includes("property") || text.includes("rental"))
-    points.push("Finding and qualifying leads in a competitive real estate market");
-  if (text.includes("artist") || text.includes("creator") || text.includes("musician") || text.includes("design"))
-    points.push("Difficulty monetizing creative work and building sustainable income");
-  if (text.includes("marketing") || text.includes("advert") || text.includes("seo"))
-    points.push("Need more effective marketing strategies with better ROI tracking");
-  if (text.includes("agency") || text.includes("client") || text.includes("freelanc"))
-    points.push("Client acquisition is inconsistent — need repeatable pipeline");
+    points.push(phrase(["product", "ecommerc", "shop"], "e-commerce/products"));
+  if (text.includes("art") || text.includes("creator") || text.includes("musician") || text.includes("design"))
+    points.push(phrase(["art", "creator", "musician"], "creative/artistic"));
 
-  if (points.length < 2) points.push("Needs scalable systems for audience growth and engagement");
+  if (points.length < 2) {
+    const firstLine = bio.split(/[.!]/).map(s => s.trim()).filter(Boolean)[0] || '';
+    if (firstLine) points.push(`Bio opens with: "${firstLine.slice(0, 40)}" — may need growth strategy`);
+  }
   if (points.length < 3) points.push("Looking for strategic partnerships and monetization opportunities");
   return points.slice(0, 3);
 }

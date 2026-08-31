@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
         platform: "x",
         profile_url: `https://x.com/${entry.username}`,
         avatar: entry.basicInfo.profile_pic_url || null,
-        bio: entry.basicInfo.caption?.slice(0, 160) || null,
+        bio: entry.basicInfo.caption || null,
         bioLink: null,
         verified: entry.basicInfo.is_verified || false,
         followers: 0,

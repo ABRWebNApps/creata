@@ -68,121 +68,144 @@ function analyzePainPoints(bio: string | null): PainPoint[] {
   if (!bio) return [];
   const text = bio.toLowerCase();
   const points: PainPoint[] = [];
+  const signal = (match: string) => {
+    const idx = text.indexOf(match);
+    if (idx < 0) return '';
+    const start = Math.max(0, idx - 10);
+    const end = Math.min(bio.length, idx + match.length + 40);
+    return bio.slice(start, end).trim();
+  };
 
   if (text.includes("market") || text.includes("brand") || text.includes("growth")) {
+    const excerpt = extractPhrase(bio, ["market", "brand", "growth"]);
     points.push({
-      text: "Struggling to scale reach or engagement in a crowded market",
+      text: `Bio signals a focus on ${excerpt.length > 20 ? excerpt.toLowerCase().slice(0, 30) + '...' : 'brand/market growth'} — may need help differentiating in a crowded space`,
       severity: "high",
       category: "Growth",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["market", "brand", "growth"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals brand/growth focus",
       solution: "Position as a growth partner — offer audience expansion strategy, cross-platform repurposing, or viral campaign concepts"
     });
   }
   if (text.includes("financ") || text.includes("invest") || text.includes("wealth") || text.includes("money")) {
+    const excerpt = extractPhrase(bio, ["financ", "invest", "wealth", "money"]);
     points.push({
-      text: "Uncertain about investment strategies in the current economy",
+      text: `Lead's content revolves around ${excerpt.length > 20 ? excerpt.toLowerCase().slice(0, 30) + '...' : 'finance/investing'} — likely needs trust-building partnerships`,
       severity: "high",
       category: "Finance",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["financ", "invest", "wealth", "money"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals finance/investing focus",
       solution: "Approach with educational content partnerships — offer to create branded finance explainers or sponsored market analysis"
     });
   }
   if (text.includes("tech") || text.includes("startup") || text.includes("founder") || text.includes("saas")) {
+    const excerpt = extractPhrase(bio, ["tech", "startup", "founder", "saas"]);
     points.push({
-      text: "Customer acquisition and retention challenges",
+      text: `Identified as ${excerpt.length > 10 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'tech/startup'} — likely navigating customer acquisition and retention`,
       severity: "high",
       category: "SaaS",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["tech", "startup", "founder", "saas"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals tech/startup focus",
       solution: "Offer B2B lead gen or case study collabs — founders value proven ROI and tangible results over vanity metrics"
     });
   }
   if (text.includes("health") || text.includes("wellness") || text.includes("fitness") || text.includes("nutrition")) {
+    const excerpt = extractPhrase(bio, ["health", "wellness", "fitness", "nutrition"]);
     points.push({
-      text: "Overwhelmed by conflicting health advice — needs trusted guidance",
+      text: `Content centers on ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'health/wellness'} — audience craves authority and trusted guidance`,
       severity: "medium",
       category: "Health",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["health", "wellness", "fitness", "nutrition"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals health/wellness focus",
       solution: "Propose co-branded wellness challenges or science-backed content series — this audience craves authority and trust"
     });
   }
   if (text.includes("career") || text.includes("job") || text.includes("hire") || text.includes("recruit")) {
+    const excerpt = extractPhrase(bio, ["career", "job", "hire", "recruit"]);
     points.push({
-      text: "Frustrated with traditional career growth or hiring processes",
+      text: `Bio suggests ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'career/hiring'} focus — may need better talent or career growth solutions`,
       severity: "medium",
       category: "Career",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["career", "job", "hire", "recruit"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals career/hiring focus",
       solution: "Pitch as a career development resource — resume tools, interview prep sponsorships, or hiring platform integrations"
     });
   }
   if (text.includes("content") || text.includes("social") || text.includes("influencer")) {
+    const excerpt = extractPhrase(bio, ["content", "social", "influencer"]);
     points.push({
-      text: "Content fatigue — difficulty standing out in their niche",
+      text: `Bio positions them as ${excerpt.length > 20 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'content creator/influencer'} — may face content fatigue and standing out challenges`,
       severity: "medium",
       category: "Content",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["content", "social", "influencer"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals content/influencer focus",
       solution: "Offer fresh content formats or series concepts — provide production value, unique angles, or data-driven storytelling"
     });
   }
   if (text.includes("coach") || text.includes("consult") || text.includes("mentor")) {
+    const excerpt = extractPhrase(bio, ["coach", "consult", "mentor"]);
     points.push({
-      text: "Difficulty converting followers into paying clients",
+      text: `Bio identifies as ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'coach/consultant'} — likely struggles converting audience into paying clients`,
       severity: "high",
       category: "Monetization",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["coach", "consult", "mentor"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals coach/consultant focus",
       solution: "Propose funnel-building partnerships — lead magnets, paid webinar collabs, or affiliate-driven course launches"
     });
   }
   if (text.includes("b2b") || text.includes("enterprise") || text.includes("ceo")) {
+    const excerpt = extractPhrase(bio, ["b2b", "enterprise", "ceo"]);
     points.push({
-      text: "Struggling to generate qualified B2B leads and close deals",
+      text: `Bio indicates ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'B2B/enterprise'} — lead generation and deal closure is likely the pain point`,
       severity: "high",
       category: "B2B",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["b2b", "enterprise", "ceo"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals B2B/enterprise focus",
       solution: "Offer account-based marketing support or LinkedIn thought leadership ghosting — B2B plays value trust over reach"
     });
   }
   if (text.includes("product") || text.includes("ecommerc") || text.includes("shop") || text.includes("store")) {
+    const excerpt = extractPhrase(bio, ["product", "ecommerc", "shop", "store"]);
     points.push({
-      text: "Need help with customer acquisition and conversion optimization",
+      text: `Bio centers on ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'products/e-commerce'} — customer acquisition and conversion optimization is key`,
       severity: "medium",
       category: "E-commerce",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["product", "ecommerc", "shop", "store"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals e-commerce/product focus",
       solution: "Propose UGC campaigns or affiliate partnerships — product-based creators need reliable traffic and conversion lift"
     });
   }
   if (text.includes("art") || text.includes("creator") || text.includes("musician") || text.includes("design")) {
+    const excerpt = extractPhrase(bio, ["art", "creator", "musician", "design"]);
     points.push({
-      text: "Difficulty monetizing creative work and building sustainable income",
+      text: `Bio presents them as ${excerpt.length > 20 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'creative/artist'} — monetizing creative work sustainably is the challenge`,
       severity: "high",
       category: "Creative",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["art", "creator", "musician", "design"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals creative/artistic focus",
       solution: "Offer platform partnerships or sponsored commissions — creatives value brand deals that respect their artistic integrity"
     });
   }
   if (text.includes("agency") || text.includes("client") || text.includes("freelanc")) {
+    const excerpt = extractPhrase(bio, ["agency", "client", "freelanc"]);
     points.push({
-      text: "Client acquisition is inconsistent — need repeatable pipeline",
+      text: `Bio describes ${excerpt.length > 15 ? excerpt.toLowerCase().slice(0, 25) + '...' : 'agency/freelance'} — inconsistent client pipeline is the recurring pain`,
       severity: "medium",
       category: "Agency",
-      evidence: bio.length > 60 ? 'Bio mentions "' + extractPhrase(bio, ["agency", "client", "freelanc"]) + '"' : "Indicated by bio context",
+      evidence: excerpt.length > 10 ? `Bio reads: "${excerpt}"` : "Bio signals agency/freelance focus",
       solution: "Propose referral partnerships or co-marketing — agencies need predictable lead flow and value cross-referrals"
     });
   }
 
-  // If no specific pain points detected, add generic ones
+  // If no specific pain points detected, add generic ones grounded in their actual bio
   if (points.length === 0) {
+    const firstPhrase = bio.split(/[.!\n]/).map(s => s.trim()).filter(Boolean)[0] || '';
     points.push({
-      text: "Audience growth has plateaued — needs fresh strategies",
+      text: firstPhrase
+        ? `Bio opens with "${firstPhrase.slice(0, 50)}" — audience growth strategy may need refreshing`
+        : "Audience growth has plateaued — needs fresh strategies",
       severity: "medium",
       category: "Growth",
-      evidence: "Inferred from profile context",
+      evidence: firstPhrase ? `Primary bio statement: "${firstPhrase.slice(0, 60)}"` : "Inferred from profile context",
       solution: "Offer audience analysis with actionable growth tactics — provide data-backed recommendations tailored to their niche"
     });
     points.push({
-      text: "Time management — too busy creating content to focus on partnerships",
+      text: firstPhrase
+        ? `Based on bio focus "${firstPhrase.slice(0, 35)}...", likely time-poor for partnership development`
+        : "Time management — too busy creating content to focus on partnerships",
       severity: "low",
       category: "Operations",
-      evidence: "Inferred from profile context",
+      evidence: firstPhrase ? `Inferred from bio opening: "${firstPhrase.slice(0, 50)}"` : "Inferred from profile context",
       solution: "Present as a done-for-you partnership solution — handle the collab logistics so they can focus on content"
     });
   }
