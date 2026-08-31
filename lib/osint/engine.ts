@@ -138,6 +138,18 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       }
     }
 
+    // Diagnostic: if ALL search queries returned zero results the user needs to know why
+    const totalSearchResults = allResults.length;
+    const failedQueries = searchResponses.filter((sr) => sr.status === "rejected").length;
+    if (totalSearchResults === 0) {
+      const keyPresent = !!process.env.FIRECRAWL_API_KEY;
+      result.errors.push(
+        failedQueries > 0
+          ? `All ${allQueries.length} search queries failed (${failedQueries} threw) — free engines + Firecrawl unreachable`
+          : `Search returned 0 results across ${allQueries.length} queries (${keyPresent ? "Firecrawl key set" : "Firecrawl key MISSING"}) — try enriching a lead with a more distinctive handle/name`
+      );
+    }
+
     // Detect cross-platform aliases (identity-only — never from niche queries)
     for (const r of identityResults) {
       const alias = detectPlatformAlias(r.url, r.title, opts, searchName);
@@ -161,12 +173,30 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       }
     }
 
-    // ── Step 4: Scrape only pages that SIGNAL emails (max 5, parallel) ──
-    const pagesToScrape = emailSignalPages.slice(0, 5).filter(
-      (url) => !ownAndWebsite.includes(url),
-    );
-    if (pagesToScrape.length > 0) {
-      const scraped = await Promise.allSettled(pagesToScrape.map((u) => crawlPage(u)));
+    // ── Step 4: Crawl search result pages to extract real emails ──
+    // Build pool: email-signal pages first, then fill with top identity/niche results
+    const crawlPool: string[] = [];
+    for (const url of emailSignalPages) {
+      if (!ownAndWebsite.includes(url) && !crawlPool.includes(url)) crawlPool.push(url);
+    }
+    // Top 3 identity results for better coverage
+    if (crawlPool.length < 5) {
+      for (const r of identityResults) {
+        if (!crawlPool.includes(r.url) && !ownAndWebsite.includes(r.url)) crawlPool.push(r.url);
+        if (crawlPool.length >= 5) break;
+      }
+    }
+    // Fill remaining with niche results
+    if (crawlPool.length < 5) {
+      for (const r of allResults) {
+        if (!crawlPool.includes(r.url) && !ownAndWebsite.includes(r.url)) crawlPool.push(r.url);
+        if (crawlPool.length >= 5) break;
+      }
+    }
+
+    const pagesToCrawl = crawlPool.slice(0, 6);
+    if (pagesToCrawl.length > 0) {
+      const scraped = await Promise.allSettled(pagesToCrawl.map((u) => crawlPage(u)));
       for (const c of scraped) {
         if (c.status === "fulfilled") {
           collectCrawlResults(c.value, "", result, opts.leadHandle, searchName);
@@ -174,11 +204,13 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       }
     }
 
-    // ── Step 5: If we have ANY results but no emails yet, try scraping
-    //     the top 3 search results directly (firecrawl scrape bypasses blocks)
+    // ── Step 5: Absolute last resort — direct Firecrawl scrape on URLs not yet crawled
     if (result.emails.length === 0 && allResults.length > 0) {
-      const topUrls = allResults.slice(0, 3).map((r) => r.url);
-      const fallbackScrapes = await Promise.allSettled(topUrls.map((u) => firecrawlScrape(u)));
+      const uncrawledUrls = allResults
+        .map((r) => r.url)
+        .filter((u) => !crawlPool.includes(u) && !ownAndWebsite.includes(u))
+        .slice(0, 3);
+      const fallbackScrapes = await Promise.allSettled(uncrawledUrls.map((u) => firecrawlScrape(u)));
       for (const fs of fallbackScrapes) {
         if (fs.status === "fulfilled" && fs.value) {
           const snippetEmails = extractEmails(fs.value);
@@ -196,11 +228,17 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     result.phones = result.phones.slice(0, 3);
 
     // ── Step 7: Generate fallback (only if NO real emails found) ──
+    // Cap at 3 — these are pattern GUESSES (firstname.lastname@gmail.com),
+    // not found data. 8 fabricated addresses pollute the result set.
     if (result.emails.length === 0 && (firstName || lastName)) {
-      for (const email of generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname)) {
+      const guessed = generateProbableEmails(firstName, lastName, cleanHandle, opts.leadNickname).slice(0, 3);
+      for (const email of guessed) {
         if (!result.emails.some((e) => e.email === email)) {
           result.emails.push({ email, source_url: null, confidence: 50 });
         }
+      }
+      if (guessed.length > 0) {
+        result.errors.push(`No real emails found — ${guessed.length} pattern-guess email(s) generated from name parts (50% confidence, likely invalid)`);
       }
     }
 

@@ -37,8 +37,8 @@ function shouldSkipUrl(url: string): boolean {
 /**
  * Crawl a single page.
  * Strategy: try direct fetch first (free), Firecrawl scrape on failure (1 credit).
- * Firecrawl scrape is also used for high-value pages (LinkedIn, contact pages)
- * even if direct fetch succeeds, to get more complete content.
+ * Firecrawl scrape is ALSO used for social/contact pages (JS rendering) even when
+ * direct fetch succeeds, to get more complete content.
  */
 export async function crawlPage(url: string): Promise<CrawlResult> {
   if (shouldSkipUrl(url)) {
@@ -65,13 +65,23 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
     // fetch failed, fall through to Firecrawl
   }
 
-  // Strategy 2: Firecrawl scrape (1 credit, but reliable)
-  // Also use Firecrawl for social/contact pages even if fetch worked —
-  // Firecrawl renders JS content and gets the full page, not just initial HTML
-  if (!content || isSocialOrContactUrl(normalizedUrl)) {
+  // Strategy 2: Firecrawl scrape (1 credit, reliable).
+  // ALWAYS fall back to Firecrawl when direct fetch gave us nothing —
+  // Vercel IPs get blocked by most sites, so direct fetch is often empty.
+  if (!content) {
     const fcContent = await firecrawlScrape(normalizedUrl);
     if (fcContent) {
-      content = fcContent; // Firecrawl markdown often has MORE usable text than raw HTML
+      content = fcContent;
+    }
+  }
+
+  // Strategy 3: For social/contact pages, ALSO prefer Firecrawl content
+  // even when direct fetch worked — Firecrawl renders JS and gets the
+  // full page, not just initial HTML.
+  if (content && isSocialOrContactUrl(normalizedUrl)) {
+    const fcContent = await firecrawlScrape(normalizedUrl);
+    if (fcContent) {
+      content = fcContent;
     }
   }
 
