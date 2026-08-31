@@ -65,43 +65,67 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     const bioWebsite = extractWebsiteFromBio(opts.leadBio);
     if (bioWebsite) result.aliases.push({ platform: "website", profile_url: bioWebsite });
 
-    // ── Step 2: Run 3 smart searches (parallel, fast) ──
-    const smartQueries = [
+    // ── Step 2: Build identity queries (name/handle — same-person search) ──
+    const identityQueries = [
       searchName,
       `${searchName} email OR contact`,
       cleanHandle,
     ];
     if (cleanHandle !== searchName.toLowerCase().replace(/\s/g, "")) {
-      smartQueries.push(`${cleanHandle} email`);
+      identityQueries.push(`${cleanHandle} email`);
     }
 
-    // Add keyword-augmented queries for better niche targeting
+    // ── Step 3: Build niche queries (keyword-augmented — industry-adjacent discovery) ──
+    const nicheQueries: string[] = [];
+    // Phase A: name/handle + keyword (still scoped to this lead)
     for (const kw of keywords) {
       if (kw.trim()) {
-        smartQueries.push(`${searchName} ${kw}`);
+        nicheQueries.push(`${searchName} ${kw}`);
         if (cleanHandle !== searchName.toLowerCase().replace(/\s/g, '')) {
-          smartQueries.push(`${cleanHandle} ${kw}`);
+          nicheQueries.push(`${cleanHandle} ${kw}`);
         }
       }
     }
+    // Phase B: keyword-only (industry-adjacent fallback — surfaces other niche-relevant leads)
+    // Only added if we have at least 1 keyword and identity-only queries are few
+    const nicheFallbackQueries: string[] = [];
+    for (const kw of keywords) {
+      if (kw.trim()) {
+        nicheFallbackQueries.push(`"${kw}" email`);
+        nicheFallbackQueries.push(`"${kw}" contact`);
+      }
+    }
 
+    // Merge: identity first, niche second (niche fallback fires only if identity results are thin)
+    const allQueries = [...identityQueries, ...nicheQueries, ...nicheFallbackQueries];
+
+    // Run ALL queries through search
     const searchResponses = await Promise.allSettled(
-      smartQueries.map((q) => searchEngine(q)),
+      allQueries.map((q, idx) => searchEngine(q).then(results => ({
+        ...results,
+        isNiche: idx >= identityQueries.length,
+      }))),
     );
 
     // Collect all search results, detect snippets containing @ (email signals)
-    const allResults: Array<{ url: string; title: string; snippet: string }> = [];
+    const allResults: Array<{ url: string; title: string; snippet: string; isNiche: boolean }> = [];
     const emailSignalPages: string[] = [];
+    // Identity results only — used for cross-platform alias detection
+    const identityResults: Array<{ url: string; title: string; snippet: string }> = [];
 
     for (const sr of searchResponses) {
       if (sr.status !== "fulfilled") continue;
       for (const r of sr.value.results) {
         if (!allResults.some((x) => x.url === r.url)) {
-          allResults.push(r);
+          allResults.push({ ...r, isNiche: sr.value.isNiche });
           // Check if snippet contains @ → page likely has an email
           if (r.snippet.includes("@") || r.title.includes("@") || /email|contact|mail/i.test(r.snippet)) {
             emailSignalPages.push(r.url);
           }
+        }
+        // Populate identity-only results for alias detection
+        if (!sr.value.isNiche && !identityResults.some((x) => x.url === r.url)) {
+          identityResults.push(r);
         }
       }
       // Extract emails from snippets immediately
@@ -114,8 +138,8 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
       }
     }
 
-    // Detect cross-platform aliases
-    for (const r of allResults) {
+    // Detect cross-platform aliases (identity-only — never from niche queries)
+    for (const r of identityResults) {
       const alias = detectPlatformAlias(r.url, r.title, opts, searchName);
       if (alias && !result.aliases.some((a) => a.profile_url === alias.profile_url)) {
         result.aliases.push(alias);
@@ -230,6 +254,14 @@ function generateProbableEmails(firstName: string, lastName: string, cleanHandle
 
 function detectPlatformAlias(url: string, title: string, opts: EnrichOptions, searchName: string): { platform: string; profile_url: string } | null {
   const lower = url.toLowerCase();
+  const searchLower = searchName.toLowerCase();
+  const handleLower = opts.leadHandle.toLowerCase().replace(/^@/, "");
+  const nameSpaceless = searchLower.replace(/\s/g, "");
+
+  // Require handle OR full name to appear in the URL path (not just ANY name part in the title)
+  const urlHasIdentity = lower.includes(handleLower) || lower.includes(nameSpaceless);
+  if (!urlHasIdentity) return null;
+
   const platforms: Array<{ key: string; pattern: RegExp }> = [
     { key: "linkedin", pattern: /linkedin\.com\/in\// },
     { key: "github", pattern: /github\.com\// },
@@ -240,12 +272,7 @@ function detectPlatformAlias(url: string, title: string, opts: EnrichOptions, se
   for (const p of platforms) {
     if (p.key === opts.leadPlatform) continue;
     if (p.pattern.test(lower)) {
-      const nameParts = searchName.toLowerCase().split(" ");
-      const titleLower = title.toLowerCase();
-      const matchesName = nameParts.some((part) => part.length > 2 && titleLower.includes(part));
-      if (matchesName || nameParts.length === 0) {
-        return { platform: p.key, profile_url: url };
-      }
+      return { platform: p.key, profile_url: url };
     }
   }
   return null;
