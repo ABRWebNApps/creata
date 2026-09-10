@@ -102,7 +102,7 @@ export default function AdminLoginPage() {
 
           <p className="mt-5 text-center text-xs text-gray-500">
             <Link href="/" className="text-gray-400 hover:text-white transition-colors">
-              ← Back to Kreata
+              ← Back to Creata
             </Link>
           </p>
         </div>

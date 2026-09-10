@@ -6,14 +6,14 @@ import { Quote } from "lucide-react";
 
 const testimonials = [
   {
-    quote: "Kreata cut our lead generation time from two weeks to about 20 seconds. It's honestly insane.",
+    quote: "Creata cut our lead generation time from two weeks to about 20 seconds. It's honestly insane.",
     name: "Sarah K.",
     role: "Brand Marketing, D2C Beauty",
     avatar: "SK",
     color: "from-blue-500 to-indigo-600",
   },
   {
-    quote: "We used to pay agencies thousands for lists that were outdated the moment we got them. Kreata is live and it shows.",
+    quote: "We used to pay agencies thousands for lists that were outdated the moment we got them. Creata is live and it shows.",
     name: "Marcus J.",
     role: "Growth Lead, Fintech",
     avatar: "MJ",
@@ -27,7 +27,7 @@ const testimonials = [
     color: "from-violet-500 to-purple-600",
   },
   {
-    quote: "We closed 3 enterprise clients in our first week using Kreata. The targeting accuracy is unreal.",
+    quote: "We closed 3 enterprise clients in our first week using Creata. The targeting accuracy is unreal.",
     name: "Amara O.",
     role: "GTM Lead, SaaS",
     avatar: "AO",
@@ -41,7 +41,7 @@ const testimonials = [
     color: "from-amber-500 to-orange-600",
   },
   {
-    quote: "No more scrolling for hours. Kreata finds the conversations where people are already asking for what we sell.",
+    quote: "No more scrolling for hours. Creata finds the conversations where people are already asking for what we sell.",
     name: "Chioma E.",
     role: "CEO, Digital Agency",
     avatar: "CE",
@@ -55,7 +55,7 @@ const testimonials = [
     color: "from-fuchsia-500 to-pink-600",
   },
   {
-    quote: "Kreata replaced three different tools in our stack. One subscription, five platforms, infinite pipeline.",
+    quote: "Creata replaced three different tools in our stack. One subscription, five platforms, infinite pipeline.",
     name: "Zainab K.",
     role: "Operations Lead, E-commerce",
     avatar: "ZK",
@@ -93,7 +93,7 @@ export default function InfiniteTestimonials() {
           What teams like yours are saying
         </h2>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-          From solo founders to enterprise sales teams — Kreata works for everyone.
+          From solo founders to enterprise sales teams — Creata works for everyone.
         </p>
       </div>
 

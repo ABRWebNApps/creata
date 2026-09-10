@@ -38,7 +38,7 @@ export default function SignInPage() {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back to Kreata
+            Welcome back to Creata
           </h1>
           <p className="text-gray-600">
             Sign in to continue finding quality leads

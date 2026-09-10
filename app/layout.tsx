@@ -9,24 +9,24 @@ import Nav from "@/components/Nav";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kreata — AI-Native Lead Generation for GTM Teams",
+  title: "Creata — AI-Native Lead Generation for GTM Teams",
   description:
-    "Find real people on social media who actually want to buy what you sell. Kreata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
+    "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
   icons: {
     icon: "/favicon.svg",
   },
   openGraph: {
-    title: "Kreata — AI-Native Lead Generation for GTM Teams",
+    title: "Creata — AI-Native Lead Generation for GTM Teams",
     description:
-      "Find real people on social media who actually want to buy what you sell. Kreata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
-    siteName: "Kreata",
+      "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
+    siteName: "Creata",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kreata — AI-Native Lead Generation for GTM Teams",
+    title: "Creata — AI-Native Lead Generation for GTM Teams",
     description:
-      "Find real people on social media who actually want to buy what you sell. Kreata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
+      "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
   },
 };
 

@@ -64,13 +64,13 @@ export default function CurtainSection() {
     <section className="py-24 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-10 text-center">
         <p className="text-sm font-medium text-blue-600 uppercase tracking-wider mb-3">
-          How Kreata converts
+          How Creata converts
         </p>
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">
           Three steps. One pipeline.
         </h2>
         <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-          From raw social media to closed deal — here's how the best GTM teams use Kreata.
+          From raw social media to closed deal — here's how the best GTM teams use Creata.
         </p>
       </div>
 

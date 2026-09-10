@@ -259,7 +259,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kreata-leads-${Date.now()}.csv`;
+    a.download = `creata-leads-${Date.now()}.csv`;
     a.click();
   };
 
