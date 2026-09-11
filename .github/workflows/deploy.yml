@@ -8,16 +8,16 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Vercel Deploy Hook
+      - name: Trigger Vercel deploy via API
+        env:
+          VERCEL_TOKEN: vcp_2lkhk5CmsitAayP0Qicv65tUt8Y5AnUO6HEnKJZdemwc4dwF4j4HbLX1
         run: |
-          RESPONSE=$(curl -s -X POST \
-            "https://api.vercel.com/v1/integrations/deploy/prj_0Y6ZrscONANavsTm6EL1Zor6UPjD/aqPgQgCCp2?force=true" \
-            -H "Content-Type: application/json")
-          echo "Hook response: $RESPONSE"
-          # Check if it returned a deployment
-          DEPLOY_ID=$(echo "$RESPONSE" | grep -o '"id":"[^"]*"' | head -1)
-          if [ -z "$DEPLOY_ID" ]; then
-            echo "WARNING: No deployment ID in response. Hook may have failed."
+          URL="https://api.vercel.com/v1/integrations/deploy/prj_0Y6ZrscONANavsTm6EL1Zor6UPjD/aqPgQgCCp2"
+          RESPONSE=$(curl -s -X POST "$URL" -H "Authorization: Bearer ${VERCEL_TOKEN}" -H "Content-Type: application/json")
+          echo "${RESPONSE}"
+          DEPLOY_ID=$(echo "${RESPONSE}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -z "${DEPLOY_ID}" ]; then
+            echo "FAILED"
             exit 1
           fi
-          echo "Deployment ID: $DEPLOY_ID"
+          echo "Deploy ID: ${DEPLOY_ID}"
