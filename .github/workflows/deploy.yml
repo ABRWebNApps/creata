@@ -8,4 +8,16 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_0Y6ZrscONANavsTm6EL1Zor6UPjD/aqPgQgCCp2
+      - name: Trigger Vercel Deploy Hook
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "https://api.vercel.com/v1/integrations/deploy/prj_0Y6ZrscONANavsTm6EL1Zor6UPjD/aqPgQgCCp2?force=true" \
+            -H "Content-Type: application/json")
+          echo "Hook response: $RESPONSE"
+          # Check if it returned a deployment
+          DEPLOY_ID=$(echo "$RESPONSE" | grep -o '"id":"[^"]*"' | head -1)
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "WARNING: No deployment ID in response. Hook may have failed."
+            exit 1
+          fi
+          echo "Deployment ID: $DEPLOY_ID"
