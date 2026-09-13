@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
 
     // Validate plan
     const validPlans: Record<string, number> = {
-      basic: 1099,
-      agency: 4099,
+      basic: 1100,
+      pro: 2500,
+      premium: 4000,
     };
 
     if (!validPlans[plan]) {

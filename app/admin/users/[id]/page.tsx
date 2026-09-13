@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AdminGuard from "@/lib/admin/admin-guard";
 import { adminFetch } from "@/lib/admin/api";
+import { PLAN_CONFIGS } from "@/lib/subscription-context";
 import {
   Shield,
   Users,
@@ -63,13 +64,15 @@ const STATUS_BADGE: Record<string, { label: string; classes: string }> = {
 const PLAN_EMOJI: Record<string, string> = {
   free: "🆓",
   basic: "🚀",
-  agency: "🔥",
+  pro: "⚡",
+  premium: "🔥",
 };
 
 const PLAN_LABEL: Record<string, string> = {
   free: "Free",
   basic: "Basic",
-  agency: "Agency",
+  pro: "Pro",
+  premium: "Premium",
 };
 
 const NAV = [
@@ -338,6 +341,20 @@ export default function AdminUserDetailPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {user.credits} credits remaining
                       </p>
+                      {(() => {
+                        const cfg = PLAN_CONFIGS[user.plan as keyof typeof PLAN_CONFIGS];
+                        if (!cfg) return null;
+                        return (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Max leads/search: <span className="font-semibold text-gray-700 dark:text-gray-300">{cfg.maxLeadsPerSearch}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Enrichment: <span className={`font-semibold ${cfg.canEnrich ? "text-green-600" : "text-gray-400"}`}>{cfg.canEnrich ? "Yes" : "No"}</span>
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Status & Actions */}
@@ -417,19 +434,19 @@ export default function AdminUserDetailPage() {
                     </div>
                   </div>
 
-                  {/* Rip Management */}
+                  {/* Credits Management */}
                   <div className="rounded-2xl border border-gray-100 dark:border-gray-800 p-5 bg-gray-50/50 dark:bg-gray-900/30 mb-8">
                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                       <ZapIcon className="w-3.5 h-3.5 text-yellow-500" />
-                      Rip Management
+                      Credits Management
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                       <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current rips</p>
-                        <p className="text-2xl font-bold">{user.credits ?? 0} rip{(user.credits ?? 0) !== 1 ? 's' : ''}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current credits</p>
+                        <p className="text-2xl font-bold">{user.credits ?? 0} credit{(user.credits ?? 0) !== 1 ? 's' : ''}</p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Set rips to</label>
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Set credits to</label>
                         <input
                           type="number"
                           value={creditInput}
@@ -445,7 +462,7 @@ export default function AdminUserDetailPage() {
                           disabled={!creditInput || actionLoading || creditInput === ""}
                           className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                         >
-                          Set Rips
+                          Set Credits
                         </button>
                         <button
                           onClick={() => setRips(10, 'add')}

@@ -44,28 +44,32 @@ export async function POST(request: NextRequest) {
             instagram_handle: creator.instagram_handle || null,
                         category_id: creator.category_id || null,
                         pain_points: creator.pain_points || [],
-                      })
-                              .select()
+                                                matched_comment: creator.matched_comment || null,
+                                                matched_caption: creator.matched_caption || null,
+                                              })
+                                                      .select()
                               .single();
 
                 if (error?.code === '23505') {
                   const { data: updateData, error: updateError } = await adminClient
                     .from("saved_leads")
                     .update({
-                nickname: creator.nickname,
-                avatar_url: creator.avatar || creator.avatar_url,
-                bio: creator.bio,
-                bio_link: creator.bioLink || creator.bio_link,
-                verified: creator.verified,
-                followers: creator.followers,
-                engagement_rate: creator.engagement_rate,
-                total_likes: creator.total_likes || null,
-                video_count: creator.video_count || null,
-                email: creator.email || null,
-                instagram_handle: creator.instagram_handle || null,
-                                category_id: creator.category_id || null,
-                                pain_points: creator.pain_points || [],
-                                          })
+                                    nickname: creator.nickname,
+                                    avatar_url: creator.avatar || creator.avatar_url,
+                                    bio: creator.bio,
+                                    bio_link: creator.bioLink || creator.bio_link,
+                                    verified: creator.verified,
+                                    followers: creator.followers,
+                                    engagement_rate: creator.engagement_rate,
+                                    total_likes: creator.total_likes || null,
+                                    video_count: creator.video_count || null,
+                                    email: creator.email || null,
+                                    instagram_handle: creator.instagram_handle || null,
+                                                    category_id: creator.category_id || null,
+                                                    pain_points: creator.pain_points || [],
+                                                                    matched_comment: creator.matched_comment || null,
+                                                                    matched_caption: creator.matched_caption || null,
+                                                              })
         .eq("user_id", user.id)
         .eq("handle", creator.handle)
         .select()

@@ -50,7 +50,8 @@ const STATUS_BADGE: Record<string, { label: string; classes: string }> = {
 const PLAN_EMOJI: Record<string, string> = {
   free: "🆓 free",
   basic: "🚀 basic",
-  agency: "🔥 agency",
+  pro: "⚡ pro",
+  premium: "🔥 premium",
 };
 
 const NAV = [

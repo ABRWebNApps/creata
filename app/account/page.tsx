@@ -28,9 +28,9 @@ export default function AccountPage() {
 
   const usedCredits =
     subscription && currentPlan
-      ? currentPlan.runs - subscription.creditsRemaining
+      ? currentPlan.creditsOnSubscribe - subscription.creditsRemaining
       : 0;
-  const totalCredits = currentPlan?.runs ?? 1;
+  const totalCredits = currentPlan?.creditsOnSubscribe ?? 1;
   const creditPercent = Math.round(
     ((totalCredits - usedCredits) / totalCredits) * 100
   );
@@ -108,8 +108,8 @@ export default function AccountPage() {
                     <div>
                       <p className="text-lg font-semibold">{currentPlan?.name}</p>
                       <p className="text-sm text-gray-500">
-                        ${currentPlan?.price}/month &middot; {currentPlan?.runs}{" "}
-                        {currentPlan?.runs === 1 ? "run" : "runs"}
+                        ${currentPlan?.price}/month &middot; {currentPlan?.creditsOnSubscribe}{" "}
+                        {currentPlan?.creditsOnSubscribe === 1 ? "credit" : "credits"}
                       </p>
                     </div>
                   </div>
@@ -171,7 +171,7 @@ export default function AccountPage() {
                 <Activity className="w-4 h-4" />
                 <span>
                   Used {usedCredits} of {totalCredits}{" "}
-                  {totalCredits === 1 ? "run" : "runs"} this period
+                  {totalCredits === 1 ? "credit" : "credits"} this period
                 </span>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function AccountPage() {
                                 {plan.name}
                               </p>
                               <p className="text-xs text-gray-400">
-                                ${plan.price}/mo &middot; {plan.runs} runs
+                                ${plan.price}/mo &middot; {plan.creditsOnSubscribe} credits
                               </p>
                             </div>
                           </div>

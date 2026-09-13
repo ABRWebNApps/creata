@@ -186,7 +186,7 @@ export default function Home() {
               <Zap className="w-4 h-4 text-blue-500" />
               <span>
                 You have <strong className="text-foreground">{subscription.creditsRemaining}</strong>{" "}
-                {subscription.creditsRemaining === 1 ? "rip" : "rips"} left{" "}
+                {subscription.creditsRemaining === 1 ? "credit" : "credits"} left{" "}
                 {subscription.plan === "free" ? (
                   <Link href="/pricing" className="text-blue-600 hover:underline font-medium">
                     — upgrade for more

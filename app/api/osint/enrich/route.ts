@@ -27,7 +27,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse request body
+    // 2. Check plan — enrichment only for Pro and Premium
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: planData, error: planError } = await adminClient
+      .from("user_plans")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (planError || !planData) {
+      return NextResponse.json({ error: "No plan found for user" }, { status: 403 });
+    }
+    if (planData.status !== "active") {
+      return NextResponse.json({ error: "Account is not active" }, { status: 403 });
+    }
+    const enrichedPlan = planData.plan === "agency" ? "premium" : planData.plan;
+    if (enrichedPlan !== "pro" && enrichedPlan !== "premium") {
+      return NextResponse.json({ error: "Upgrade required — enrichment is only available on Pro and Premium plans" }, { status: 403 });
+    }
+
+    // 3. Parse request body
     const body = await request.json();
     const { leadId } = body;
     if (!leadId) {
@@ -35,9 +55,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Load lead from DB (security: verify ownership)
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
     const { data: lead, error: loadError } = await adminClient
       .from("saved_leads")
       .select("id, handle, nickname, platform, profile_url, bio, tags, pain_points, user_id")

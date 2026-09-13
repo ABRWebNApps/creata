@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type Plan = "free" | "basic" | "agency";
+export type Plan = "free" | "basic" | "pro" | "premium";
 
 export type UserSubscription = {
   plan: Plan;
@@ -15,13 +15,17 @@ export type UserSubscription = {
   subscriptionEnd: string | null;
   email: string | null;
   status: "active" | "suspended" | "blocked";
+  maxLeadsPerSearch: number;
+  canEnrich: boolean;
 };
 
 export type PlanConfig = {
   id: Plan;
   name: string;
   price: number;
-  runs: number;
+  creditsOnSubscribe: number;
+  maxLeadsPerSearch: number;
+  canEnrich: boolean;
   features: string[];
   emoji: string;
 };
@@ -33,17 +37,21 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     id: "free",
     name: "Free",
     price: 0,
-    runs: 1,
-    features: ["one free run", "save & export leads", "leads outreach"],
+    creditsOnSubscribe: 1,
+    maxLeadsPerSearch: 20,
+    canEnrich: false,
+    features: ["one free credit", "save & export leads", "leads outreach"],
     emoji: "🎁",
   },
   basic: {
     id: "basic",
     name: "Basic",
-    price: 10.99,
-    runs: 15,
+    price: 11,
+    creditsOnSubscribe: 15,
+    maxLeadsPerSearch: 20,
+    canEnrich: false,
     features: [
-      "15 search runs",
+      "15 search credits",
       "social media lead ranking",
       "verification badges",
       "save & export leads",
@@ -52,13 +60,15 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     ],
     emoji: "🚀",
   },
-  agency: {
-    id: "agency",
-    name: "Agency",
-    price: 40.99,
-    runs: 30,
+  pro: {
+    id: "pro",
+    name: "Pro",
+    price: 25,
+    creditsOnSubscribe: 35,
+    maxLeadsPerSearch: 30,
+    canEnrich: true,
     features: [
-      "30 search runs",
+      "35 search credits",
       "lead extracting",
       "email finder",
       "enrich lead data",
@@ -66,6 +76,27 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
       "leads outreach",
       "priority support",
       "top-up credits available",
+      "buying-signal insight (comment + caption)",
+    ],
+    emoji: "⚡",
+  },
+  premium: {
+    id: "premium",
+    name: "Premium",
+    price: 40,
+    creditsOnSubscribe: 50,
+    maxLeadsPerSearch: 40,
+    canEnrich: true,
+    features: [
+      "50 search credits",
+      "lead extracting",
+      "email finder",
+      "enrich lead data",
+      "save & export leads",
+      "leads outreach",
+      "priority support",
+      "top-up credits available",
+      "buying-signal insight (comment + caption)",
     ],
     emoji: "🔥",
   },
@@ -111,6 +142,8 @@ function loadLocalSubscription(): UserSubscription | null {
       subscriptionEnd: end || null,
       email: null,
       status: "active",
+      maxLeadsPerSearch: PLAN_CONFIGS[plan]?.maxLeadsPerSearch ?? 20,
+      canEnrich: PLAN_CONFIGS[plan]?.canEnrich ?? false,
     };
   } catch {
     return null;
@@ -142,6 +175,8 @@ function getFreeSubscription(email: string | null): UserSubscription {
     subscriptionEnd: null,
     email,
     status: "active",
+    maxLeadsPerSearch: PLAN_CONFIGS.free.maxLeadsPerSearch,
+    canEnrich: PLAN_CONFIGS.free.canEnrich,
   };
 }
 
@@ -202,16 +237,20 @@ export function SubscriptionProvider({
       }
 
       if (data) {
-        const plan: Plan = data.plan ?? "free";
+        // Map legacy "agency" plan to "premium"
+        const rawPlan = data.plan ?? "free";
+        const plan: Plan = rawPlan === "agency" ? "premium" : (rawPlan as Plan);
         const config = PLAN_CONFIGS[plan] ?? PLAN_CONFIGS.free;
-        const totalPurchased = data.total_purchased ?? (plan === "free" ? 0 : config.runs);
+        const totalPurchased = data.total_purchased ?? (plan === "free" ? 0 : config.creditsOnSubscribe);
         const sub: UserSubscription = {
           plan,
-          creditsRemaining: data.credits_remaining ?? config.runs,
+          creditsRemaining: data.credits_remaining ?? config.creditsOnSubscribe,
           totalPurchased,
           subscriptionEnd: data.subscription_end ?? null,
           email: user.email ?? null,
           status: data.status ?? "active",
+          maxLeadsPerSearch: config.maxLeadsPerSearch,
+          canEnrich: config.canEnrich,
         };
         setSubscription(sub);
         saveLocalSubscription(sub);

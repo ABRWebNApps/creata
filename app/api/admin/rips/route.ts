@@ -7,15 +7,15 @@ export async function PATCH(req: NextRequest) {
   if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { user_id, rips, action } = body;
+  const { user_id, credits, action } = body;
 
   if (!user_id) {
     return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
   }
 
   if (action === 'set') {
-    if (rips === undefined || rips < 0) {
-      return NextResponse.json({ error: 'rips must be a non-negative number for action=set' }, { status: 400 });
+    if (credits === undefined || credits < 0) {
+      return NextResponse.json({ error: 'credits must be a non-negative number for action=set' }, { status: 400 });
     }
 
     const { data: existing, error: fetchErr } = await supabaseAdmin
@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
       .from('user_plans')
       .upsert({
         user_id,
-        credits_remaining: rips,
+        credits_remaining: credits,
         plan: existing?.plan || 'free',
         status: 'active',
         updated_at: new Date().toISOString(),
@@ -45,16 +45,16 @@ export async function PATCH(req: NextRequest) {
     await supabaseAdmin.from('activity_logs').insert({
       user_id,
       email: authed.email,
-      action: 'admin_set_rips',
-      details: JSON.stringify({ changed_by: authed.email, new_rips: rips }),
+      action: 'admin_set_credits',
+      details: JSON.stringify({ changed_by: authed.email, new_credits: credits }),
       ip_address: req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown',
     });
 
-    return NextResponse.json({ success: true, rips });
+    return NextResponse.json({ success: true, credits });
   }
 
   if (action === 'add' || action === 'deduct') {
-    const amount = Math.abs(rips || 0);
+    const amount = Math.abs(credits || 0);
     if (amount === 0) {
       return NextResponse.json({ error: 'amount must be > 0 for add/deduct' }, { status: 400 });
     }
@@ -69,16 +69,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: fetchErr.message }, { status: 500 });
     }
 
-    const currentRips = existing?.credits_remaining ?? 0;
-    const newRips = action === 'add'
-      ? currentRips + amount
-      : Math.max(0, currentRips - amount);
+    const currentCredits = existing?.credits_remaining ?? 0;
+    const newCredits = action === 'add'
+      ? currentCredits + amount
+      : Math.max(0, currentCredits - amount);
 
     const { error: upsertErr } = await supabaseAdmin
       .from('user_plans')
       .upsert({
         user_id,
-        credits_remaining: newRips,
+        credits_remaining: newCredits,
         plan: existing?.plan || 'free',
         status: 'active',
         updated_at: new Date().toISOString(),
@@ -91,12 +91,12 @@ export async function PATCH(req: NextRequest) {
     await supabaseAdmin.from('activity_logs').insert({
       user_id,
       email: authed.email,
-      action: `admin_${action}_rips`,
-      details: JSON.stringify({ changed_by: authed.email, amount, previous: currentRips, new_rips: newRips }),
+      action: `admin_${action}_credits`,
+      details: JSON.stringify({ changed_by: authed.email, amount, previous: currentCredits, new_credits: newCredits }),
       ip_address: req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown',
     });
 
-    return NextResponse.json({ success: true, previous: currentRips, new_rips: newRips });
+    return NextResponse.json({ success: true, previous: currentCredits, new_credits: newCredits });
   }
 
   return NextResponse.json({ error: 'action must be set, add, or deduct' }, { status: 400 });

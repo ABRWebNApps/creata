@@ -49,7 +49,7 @@ export default function Nav() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-50 border border-blue-200 rounded-full text-blue-700 mr-2"
                 >
                   <Zap className="w-3 h-3" />
-                  {credits}/{currentPlan.runs}
+                  {credits}/{currentPlan.creditsOnSubscribe}
                 </Link>
               )}
               <Link

@@ -140,11 +140,18 @@ function PricingContent() {
 
   // ── Feature icon mapping ─────────────────────────────────────────────────
   const featureIcons: Record<string, React.ReactNode> = {
-    "one free rip": <Search className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "one free credit": <Search className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "15 search credits": <Zap className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "35 search credits": <Zap className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "50 search credits": <Zap className="w-4 h-4 text-blue-600 flex-shrink-0" />,
+    "20 leads per search": <Search className="w-4 h-4 text-indigo-600 flex-shrink-0" />,
+    "30 leads per search": <Search className="w-4 h-4 text-indigo-600 flex-shrink-0" />,
+    "40 leads per search": <Search className="w-4 h-4 text-indigo-600 flex-shrink-0" />,
     "save & export leads": <Download className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
     "lead extracting": <Zap className="w-4 h-4 text-blue-600 flex-shrink-0" />,
     "email finder": <Mail className="w-4 h-4 text-purple-600 flex-shrink-0" />,
     "enrich lead": <Users className="w-4 h-4 text-indigo-600 flex-shrink-0" />,
+    "buying-signal insight": <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />,
   };
 
   // ── Plan card config ─────────────────────────────────────────────────────
@@ -154,7 +161,8 @@ function PricingContent() {
     name: string;
     tagline: string;
     price: number;
-    runs: number;
+    creditsOnSubscribe: number;
+    maxLeadsPerSearch: number;
     features: string[];
     cta: string;
     popular?: boolean;
@@ -162,33 +170,47 @@ function PricingContent() {
     {
       id: "free",
       emoji: "🎁",
-      name: "One Free Rip",
-      tagline: "Get a taste — one free search, see if Creata's your vibe",
+      name: "Free",
+      tagline: "Get a taste — one free credit, see if Creata's your vibe",
       price: 0,
-      runs: 1,
+      creditsOnSubscribe: 1,
+      maxLeadsPerSearch: 20,
       features: PLAN_CONFIGS.free.features,
       cta: currentPlan === "free" ? "Current plan" : "Get started",
     },
     {
       id: "basic",
       emoji: "🚀",
-      name: "The Hustler",
+      name: "Basic",
       tagline: "For solo operators who need consistent leads",
-      price: 10.99,
-      runs: 15,
+      price: 11,
+      creditsOnSubscribe: 15,
+      maxLeadsPerSearch: 20,
       features: PLAN_CONFIGS.basic.features,
-      cta: currentPlan === "basic" ? "Current plan" : "Subscribe — Paystack",
+      cta: currentPlan === "basic" ? "Current plan" : "Subscribe",
       popular: true,
     },
     {
-      id: "agency",
-      emoji: "🔥",
-      name: "The Plug",
+      id: "pro",
+      emoji: "⚡",
+      name: "Pro",
       tagline: "Full lead extracting, email finding, enrichment — the whole kit",
-      price: 40.99,
-      runs: 30,
-      features: PLAN_CONFIGS.agency.features,
-      cta: currentPlan === "agency" ? "Current plan" : "Subscribe — Paystack",
+      price: 25,
+      creditsOnSubscribe: 35,
+      maxLeadsPerSearch: 30,
+      features: PLAN_CONFIGS.pro.features,
+      cta: currentPlan === "pro" ? "Current plan" : "Subscribe",
+    },
+    {
+      id: "premium",
+      emoji: "🔥",
+      name: "Premium",
+      tagline: "Maximum power — unlimited potential with enrichment",
+      price: 40,
+      creditsOnSubscribe: 50,
+      maxLeadsPerSearch: 40,
+      features: PLAN_CONFIGS.premium.features,
+      cta: currentPlan === "premium" ? "Current plan" : "Subscribe",
     },
   ];
 
@@ -203,7 +225,7 @@ function PricingContent() {
             <div className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl mb-8 animate-slide-up">
               <Crown className="w-5 h-5 text-emerald-600" />
               <span className="text-emerald-700 font-semibold text-sm">
-                Bag secured! 🎉 {verifiedPlan === "agency" ? "The Plug" : verifiedPlan === "basic" ? "The Hustler" : "Free"} plan is live — go run those searches!
+                Bag secured! 🎉 {verifiedPlan === "premium" ? "Premium" : verifiedPlan === "pro" ? "Pro" : verifiedPlan === "basic" ? "Basic" : "Free"} plan is live — go run those searches!
               </span>
             </div>
           )}
@@ -222,14 +244,14 @@ function PricingContent() {
             Pick your plan
           </h1>
           <p className="text-lg text-gray-500 max-w-xl mx-auto leading-relaxed">
-            First one&apos;s on us — one free rip, no cap. Upgrade when you&apos;re ready to go viral.
+            First one&apos;s on us — one free credit, no cap. Upgrade when you&apos;re ready to go viral.
           </p>
         </div>
       </section>
 
       {/* ── Plan Cards ──────────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 pb-24">
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
           {planCards.map((plan) => {
             const isCurrent = currentPlan === plan.id;
             const isFree = plan.id === "free";
@@ -291,11 +313,11 @@ function PricingContent() {
                     )}
                   </div>
 
-                  {/* Runs count */}
+                  {/* Credits count */}
                   <div className="flex items-center gap-2 mb-6 py-3 px-4 bg-gray-50 rounded-xl">
                     <Zap className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-semibold text-gray-700">
-                      {plan.runs} {plan.runs === 1 ? "search" : "searches"} / month
+                      {plan.creditsOnSubscribe} {plan.creditsOnSubscribe === 1 ? "credit" : "credits"} / month
                     </span>
                   </div>
 
@@ -324,7 +346,7 @@ function PricingContent() {
                       href="/"
                       className="w-full py-3.5 text-sm font-semibold text-center rounded-xl bg-black text-white hover:opacity-90 transition-opacity inline-block"
                     >
-                      Start your free rip
+                      Start your free credit
                       <ArrowRight className="w-4 h-4 inline ml-1.5 -mt-0.5" />
                     </Link>
                   ) : (

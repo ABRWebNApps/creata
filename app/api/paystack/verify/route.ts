@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 const PAYSTACK_API = 'https://api.paystack.co/transaction/verify';
 
 const PLAN_CREDITS: Record<string, number> = {
-  basic: 10,
-  agency: 30,
+  basic: 15,
+  pro: 35,
+  premium: 50,
+  // Legacy fallback
+  agency: 50,
 };
 
 export async function GET(request: NextRequest) {
