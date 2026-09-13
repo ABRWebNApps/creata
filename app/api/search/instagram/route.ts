@@ -23,7 +23,9 @@ type InstagramCreator = {
   category: string | null;
   score: number;
   pain_points: string[];
-};
+    matched_comment?: string | null;
+    matched_caption?: string | null;
+  };
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoffMs = 3000): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -129,28 +131,30 @@ export async function POST(request: NextRequest) {
           const score = calcScore(followerCount, engagementRate, email !== null, profile.is_business_account || false, profile.category_name || null);
 
           allCreators.push({
-            handle: profile.username,
-            nickname: profile.full_name || profile.username,
-            platform: "instagram",
-            profile_url: `https://instagram.com/${profile.username}`,
-            avatar: profile.profile_pic_url || null,
-            bio: profile.biography || null,
-            bioLink: profile.external_url || null,
-            verified: profile.is_verified || false,
-            followers: followerCount,
-            following: profile.following_count || 0,
-            total_likes: 0,
-            video_count: profile.media_count || 0,
-            posts_count: profile.media_count || 0,
-            engagement_rate: engagementRate,
-            email,
-            instagram_handle: profile.username,
-            is_private: profile.is_private || false,
-            is_business: profile.is_business_account || false,
-            category: profile.category_name || null,
-                        score,
-                        pain_points: suggestPainPoints(profile.biography || null),
-                      });
+                      handle: profile.username,
+                      nickname: profile.full_name || profile.username,
+                      platform: "instagram",
+                      profile_url: `https://instagram.com/${profile.username}`,
+                      avatar: profile.profile_pic_url || null,
+                      bio: profile.biography || null,
+                      bioLink: profile.external_url || null,
+                      verified: profile.is_verified || false,
+                      followers: followerCount,
+                      following: profile.following_count || 0,
+                      total_likes: 0,
+                      video_count: profile.media_count || 0,
+                      posts_count: profile.media_count || 0,
+                      engagement_rate: engagementRate,
+                      email,
+                      instagram_handle: profile.username,
+                      is_private: profile.is_private || false,
+                      is_business: profile.is_business_account || false,
+                      category: profile.category_name || null,
+                                  score,
+                                  pain_points: suggestPainPoints(profile.biography || null),
+                                  matched_comment: null,
+                                  matched_caption: null,
+                                });
         }
       } catch (err) {
         console.error(`Error searching Instagram keyword "${keyword}":`, err);

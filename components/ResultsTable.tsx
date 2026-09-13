@@ -36,9 +36,11 @@ interface Lead {
   verified: boolean;
   bio?: string;
   total_likes?: number;
-  video_count?: number;
-  instagram_handle?: string;
-}
+    video_count?: number;
+    instagram_handle?: string;
+    matched_comment?: string;
+    matched_caption?: string;
+  }
 
 interface ResultsTableProps {
   data: {
@@ -425,9 +427,23 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex-1 bg-muted rounded-lg py-2 px-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Followers</p>
+                            {/* Why this lead matched */}
+                            {creator.matched_comment && (
+                              <div className="mb-3 bg-blue-50/50 border border-blue-100 rounded-lg p-2.5">
+                                <p className="text-[10px] text-blue-500 uppercase tracking-wider font-medium mb-1">Matched Comment</p>
+                                <p className="text-xs text-blue-900 leading-relaxed line-clamp-3">{creator.matched_comment}</p>
+                                {creator.matched_caption && creator.matched_caption !== creator.matched_comment && (
+                                  <>
+                                    <p className="text-[10px] text-blue-500 uppercase tracking-wider font-medium mt-2 mb-1">Caption</p>
+                                    <p className="text-xs text-blue-900 leading-relaxed line-clamp-2">{creator.matched_caption}</p>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex-1 bg-muted rounded-lg py-2 px-3">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Followers</p>
                   <p className="font-semibold text-sm">
                     {(creator.followers || 0).toLocaleString()}
                   </p>
@@ -482,7 +498,8 @@ export default function ResultsTable({ data }: ResultsTableProps) {
             <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Lead</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Followers</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold">Why</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold">Followers</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Engagement</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Contact</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
@@ -529,9 +546,28 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-medium">
-                      {(creator.followers || 0).toLocaleString()}
-                    </td>
+                                        <td className="px-6 py-4 max-w-[200px]">
+                                          {creator.matched_comment ? (
+                                            <div className="group relative">
+                                              <p className="text-xs text-blue-700 leading-relaxed line-clamp-2 cursor-default">
+                                                {creator.matched_comment}
+                                              </p>
+                                              <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-10">
+                                                <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-sm shadow-lg whitespace-normal">
+                                                  <p className="mb-1"><span className="font-semibold">Matched comment:</span> {creator.matched_comment}</p>
+                                                  {creator.matched_caption && creator.matched_caption !== creator.matched_comment && (
+                                                    <p><span className="font-semibold">Caption:</span> {creator.matched_caption}</p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <span className="text-muted-foreground text-xs">—</span>
+                                          )}
+                                        </td>
+                                        <td className="px-6 py-4 font-medium">
+                                          {(creator.followers || 0).toLocaleString()}
+                                        </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                         {creator.engagement_rate || 0}%

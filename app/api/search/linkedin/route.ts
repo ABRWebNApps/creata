@@ -20,6 +20,8 @@ type LinkedInCreator = {
   profile_fetched: boolean;
   pain_points: string[];
   score: number;
+  matched_comment?: string | null;
+  matched_caption?: string | null;
 };
 
 // Max profile fetches to conserve credits
@@ -174,6 +176,8 @@ export async function POST(request: NextRequest) {
             post_title: post.name || "",
             post_description: post.description || "",
             post_date: post.datePublished || "",
+            matched_comment: post.description || null,
+            matched_caption: null,
           });
         }
       } catch (err) {
@@ -256,6 +260,8 @@ export async function POST(request: NextRequest) {
             profile_fetched: true,
             pain_points: painPoints,
             score,
+            matched_comment: entry.matched_comment || null,
+            matched_caption: entry.matched_caption || null,
           });
         } else {
           // Profile fetch failed — fall back to search-level data
@@ -289,6 +295,8 @@ export async function POST(request: NextRequest) {
             profile_fetched: false,
             pain_points: painPoints,
             score,
+            matched_comment: entry.matched_comment || null,
+            matched_caption: entry.matched_caption || null,
           });
         }
       }
@@ -328,6 +336,8 @@ export async function POST(request: NextRequest) {
         profile_fetched: false,
         pain_points: painPoints,
         score,
+        matched_comment: entry.matched_comment || null,
+        matched_caption: entry.matched_caption || null,
       });
     }
 

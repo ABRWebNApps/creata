@@ -20,6 +20,8 @@ type FacebookCreator = {
   profile_fetched: boolean;
   score: number;
   pain_points: string[];
+  matched_comment?: string | null;
+  matched_caption?: string | null;
 };
 
 const MAX_PROFILE_FETCHES = 30;
@@ -116,6 +118,8 @@ export async function POST(request: NextRequest) {
             profile_fetched: false,
             score: 0,
             pain_points: suggestPainPoints(user.bio || user.about || null),
+            matched_comment: null,
+            matched_caption: null,
           });
         }
       } catch (err) {

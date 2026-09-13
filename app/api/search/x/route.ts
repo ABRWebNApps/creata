@@ -19,6 +19,8 @@ type XCreator = {
   email: string | null;
   score: number;
   pain_points: string[];
+  matched_comment?: string | null;
+  matched_caption?: string | null;
 };
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoffMs = 3000): Promise<Response> {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const creators: XCreator[] = [];
     const seenHandles = new Set<string>();
-    const pendingProfiles: { username: string; basicInfo: any }[] = [];
+    const pendingProfiles: { username: string; matched_comment: string | null; basicInfo: any }[] = [];
 
     // PHASE 1: Search Threads by keyword (1 credit per keyword)
     for (const keyword of keywords) {
@@ -99,6 +101,7 @@ export async function POST(request: NextRequest) {
           seenHandles.add(user.username);
           pendingProfiles.push({
             username: user.username,
+            matched_comment: post.caption?.text || null,
             basicInfo: {
               ...user,
               like_count: post.like_count || 0,
@@ -179,6 +182,8 @@ export async function POST(request: NextRequest) {
         email,
         score,
         pain_points: suggestPainPoints(profileData.description || null),
+        matched_comment: (() => { const p = pendingProfiles.find(p => p.username === username); return p?.matched_comment || null; })(),
+        matched_caption: null,
       });
     }
 
@@ -212,6 +217,8 @@ export async function POST(request: NextRequest) {
         email: null,
         score: calcScore(0, estEngagement, false),
         pain_points: suggestPainPoints(entry.basicInfo.caption || null),
+        matched_comment: entry.matched_comment || null,
+        matched_caption: null,
       });
     }
 
