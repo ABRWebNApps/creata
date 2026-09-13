@@ -24,36 +24,39 @@ export async function POST(request: NextRequest) {
 
     const creator = await request.json();
 
-    const { data, error } = await adminClient
-          .from("saved_leads")
-          .insert({
-            user_id: user.id,
-            handle: creator.handle,
-            nickname: creator.nickname,
-            platform: creator.platform || "tiktok",
-            profile_url: creator.profile_url,
-            avatar_url: creator.avatar || creator.avatar_url,
-            bio: creator.bio,
-            bio_link: creator.bioLink || creator.bio_link,
-            verified: creator.verified,
-            followers: creator.followers,
-            engagement_rate: creator.engagement_rate,
-            total_likes: creator.total_likes || null,
-            video_count: creator.video_count || null,
-            email: creator.email || null,
-            instagram_handle: creator.instagram_handle || null,
-                        category_id: creator.category_id || null,
-                        pain_points: creator.pain_points || [],
-                                                matched_comment: creator.matched_comment || null,
-                                                matched_caption: creator.matched_caption || null,
-                                              })
+    // Build insert payload — conditionally include matched_comment/caption
+        // (columns may not exist in older DB schemas until migration runs)
+        const insertPayload: Record<string, any> = {
+          user_id: user.id,
+          handle: creator.handle,
+          nickname: creator.nickname,
+          platform: creator.platform || "tiktok",
+          profile_url: creator.profile_url,
+          avatar_url: creator.avatar || creator.avatar_url,
+          bio: creator.bio,
+          bio_link: creator.bioLink || creator.bio_link,
+          verified: creator.verified,
+          followers: creator.followers,
+          engagement_rate: creator.engagement_rate,
+          total_likes: creator.total_likes || null,
+          video_count: creator.video_count || null,
+          email: creator.email || null,
+          instagram_handle: creator.instagram_handle || null,
+          category_id: creator.category_id || null,
+          pain_points: creator.pain_points || [],
+        };
+        if (creator.matched_comment != null) insertPayload.matched_comment = creator.matched_comment;
+        if (creator.matched_caption != null) insertPayload.matched_caption = creator.matched_caption;
+
+        const { data, error } = await adminClient
+              .from("saved_leads")
+              .insert(insertPayload)
                                                       .select()
                               .single();
 
                 if (error?.code === '23505') {
-                  const { data: updateData, error: updateError } = await adminClient
-                    .from("saved_leads")
-                    .update({
+                                  // Build update payload — conditionally include matched_comment/caption
+                                  const updatePayload: Record<string, any> = {
                                     nickname: creator.nickname,
                                     avatar_url: creator.avatar || creator.avatar_url,
                                     bio: creator.bio,
@@ -65,15 +68,18 @@ export async function POST(request: NextRequest) {
                                     video_count: creator.video_count || null,
                                     email: creator.email || null,
                                     instagram_handle: creator.instagram_handle || null,
-                                                    category_id: creator.category_id || null,
-                                                    pain_points: creator.pain_points || [],
-                                                                    matched_comment: creator.matched_comment || null,
-                                                                    matched_caption: creator.matched_caption || null,
-                                                              })
-        .eq("user_id", user.id)
-        .eq("handle", creator.handle)
-        .select()
-        .maybeSingle();
+                                    category_id: creator.category_id || null,
+                                    pain_points: creator.pain_points || [],
+                                  };
+                                  if (creator.matched_comment != null) updatePayload.matched_comment = creator.matched_comment;
+                                                                    if (creator.matched_caption != null) updatePayload.matched_caption = creator.matched_caption;
+                                                    const { data: updateData, error: updateError } = await adminClient
+                                                      .from("saved_leads")
+                                                      .update(updatePayload)
+                                          .eq("user_id", user.id)
+                                          .eq("handle", creator.handle)
+                                          .select()
+                                          .maybeSingle();
 
       if (updateError) {
         console.error("Update error:", updateError);
