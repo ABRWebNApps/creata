@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import {
   Sparkles, CheckCircle, Zap, Shield, Crown,
   ArrowRight, Mail, Search, Download, Users,
-  Building2, Wallet, Naira,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
