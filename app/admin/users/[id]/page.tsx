@@ -10,7 +10,7 @@ import {
   Shield, Users, Activity, BarChart3, Settings,
   ChevronLeft, Ban, CheckCircle, AlertTriangle,
   RefreshCw, Menu, X, Calendar, Clock, Zap, DollarSign,
-  CreditCard, Wallet, Download,
+  CreditCard, Wallet, Search,
 } from "lucide-react";
 
 type UserDetail = {
