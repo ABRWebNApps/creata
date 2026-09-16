@@ -35,6 +35,7 @@ type ActivityLog = {
 
 type Payment = {
   id: string;
+  user_id: string;
   plan: string;
   currency: string;
   amount: number;
@@ -45,6 +46,7 @@ type Payment = {
 
 type Subscription = {
   id: string;
+  user_id: string;
   plan: string;
   currency: string;
   status: string;
