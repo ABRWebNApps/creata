@@ -3,10 +3,12 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { PLAN_PRICING } from "@/lib/paystack";
+import type { PlanId } from "@/lib/paystack";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type Plan = "free" | "basic" | "pro" | "premium";
+export type Plan = PlanId;
 
 export type UserSubscription = {
   plan: Plan;
@@ -17,12 +19,15 @@ export type UserSubscription = {
   status: "active" | "suspended" | "blocked";
   maxLeadsPerSearch: number;
   canEnrich: boolean;
+  currency?: "NGN" | "USD";
+  paystackCustomerCode?: string;
 };
 
 export type PlanConfig = {
   id: Plan;
   name: string;
-  price: number;
+  priceUsd: number;
+  priceNgn: number;
   creditsOnSubscribe: number;
   maxLeadsPerSearch: number;
   canEnrich: boolean;
@@ -30,77 +35,24 @@ export type PlanConfig = {
   emoji: string;
 };
 
-// ── Plan configurations ────────────────────────────────────────────────────
+// ── Build PlanConfig from shared pricing ───────────────────────────────────
 
-export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
-  free: {
-    id: "free",
-    name: "Free",
-    price: 0,
-    creditsOnSubscribe: 1,
-    maxLeadsPerSearch: 20,
-    canEnrich: false,
-    features: ["one free credit", "save & export leads", "leads outreach"],
-    emoji: "🎁",
-  },
-  basic: {
-    id: "basic",
-    name: "Basic",
-    price: 11,
-    creditsOnSubscribe: 15,
-    maxLeadsPerSearch: 20,
-    canEnrich: false,
-    features: [
-      "15 search credits",
-      "social media lead ranking",
-      "verification badges",
-      "save & export leads",
-      "leads outreach",
-      "top-up credits available",
-    ],
-    emoji: "🚀",
-  },
-  pro: {
-    id: "pro",
-    name: "Pro",
-    price: 25,
-    creditsOnSubscribe: 35,
-    maxLeadsPerSearch: 30,
-    canEnrich: true,
-    features: [
-      "35 search credits",
-      "lead extracting",
-      "email finder",
-      "enrich lead data",
-      "save & export leads",
-      "leads outreach",
-      "priority support",
-      "top-up credits available",
-      "buying-signal insight (comment + caption)",
-    ],
-    emoji: "⚡",
-  },
-  premium: {
-    id: "premium",
-    name: "Premium",
-    price: 40,
-    creditsOnSubscribe: 50,
-    maxLeadsPerSearch: 40,
-    canEnrich: true,
-    features: [
-      "50 search credits",
-      "lead extracting",
-      "email finder",
-      "enrich lead data",
-      "save & export leads",
-      "leads outreach",
-      "priority support",
-      "top-up credits available",
-      "buying-signal insight (comment + caption)",
-    ],
-    emoji: "🔥",
-  },
-};
+export const PLAN_CONFIGS: Record<Plan, PlanConfig> = Object.fromEntries(
+  Object.entries(PLAN_PRICING).map(([id, p]) => [
+    id,
+    {
+      id: id as Plan,
+      name: p.name,
+      priceUsd: p.usd,
+      priceNgn: p.ngn,
+      creditsOnSubscribe: p.creditsOnSubscribe,
+      maxLeadsPerSearch: p.maxLeadsPerSearch,
+      canEnrich: p.canEnrich,
+      features: p.features,
+      emoji: p.emoji,
+    },
+  ])
+) as Record<Plan, PlanConfig>;
 
 // ── Context shape ──────────────────────────────────────────────────────────
 
@@ -111,6 +63,8 @@ type SubscriptionContextType = {
   canSearch: () => boolean;
   consumeCredit: () => Promise<boolean>;
   hasFeature: (feature: string) => boolean;
+  preferredCurrency: "NGN" | "USD";
+  setPreferredCurrency: (c: "NGN" | "USD") => void;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(
@@ -124,6 +78,7 @@ const LS_KEYS = {
   creditsRemaining: "creata_credits_remaining",
   totalPurchased: "creata_total_purchased",
   subscriptionEnd: "creata_subscription_end",
+  currency: "creata_currency",
 } as const;
 
 function loadLocalSubscription(): UserSubscription | null {
@@ -153,15 +108,9 @@ function loadLocalSubscription(): UserSubscription | null {
 function saveLocalSubscription(sub: UserSubscription) {
   try {
     localStorage.setItem(LS_KEYS.plan, sub.plan);
-    localStorage.setItem(
-      LS_KEYS.creditsRemaining,
-      String(sub.creditsRemaining)
-    );
+    localStorage.setItem(LS_KEYS.creditsRemaining, String(sub.creditsRemaining));
     localStorage.setItem(LS_KEYS.totalPurchased, String(sub.totalPurchased));
-    localStorage.setItem(
-      LS_KEYS.subscriptionEnd,
-      sub.subscriptionEnd ?? ""
-    );
+    localStorage.setItem(LS_KEYS.subscriptionEnd, sub.subscriptionEnd ?? "");
   } catch {
     // localStorage may be unavailable in SSR / private mode — silently skip
   }
@@ -188,10 +137,22 @@ export function SubscriptionProvider({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<UserSubscription | null>(
-    null
-  );
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [preferredCurrency, setPreferredCurrency] = useState<"NGN" | "USD">(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEYS.currency) as "NGN" | "USD" | null;
+      return saved === "NGN" || saved === "USD" ? saved : "NGN";
+    } catch {
+      return "NGN";
+    }
+  });
+
+  // Persist currency preference
+  const setCurrencyPref = useCallback((c: "NGN" | "USD") => {
+    setPreferredCurrency(c);
+    try { localStorage.setItem(LS_KEYS.currency, c); } catch {}
+  }, []);
 
   const loadSubscription = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -218,11 +179,7 @@ export function SubscriptionProvider({
         .maybeSingle();
 
       if (error) {
-        console.warn(
-          "Subscription: Supabase fetch failed, falling back to localStorage:",
-          error.message
-        );
-        // Fall back to whatever we have in localStorage
+        console.warn("Subscription: Supabase fetch failed, falling back to localStorage:", error.message);
         const cached = loadLocalSubscription();
         if (cached) {
           cached.email = user.email ?? null;
@@ -242,6 +199,25 @@ export function SubscriptionProvider({
         const plan: Plan = rawPlan === "agency" ? "premium" : (rawPlan as Plan);
         const config = PLAN_CONFIGS[plan] ?? PLAN_CONFIGS.free;
         const totalPurchased = data.total_purchased ?? (plan === "free" ? 0 : config.creditsOnSubscribe);
+
+        // Fetch active subscription for currency info
+        let subCurrency: "NGN" | "USD" | undefined;
+        let customerCode: string | undefined;
+        try {
+          const { data: activeSub } = await supabase
+            .from("subscriptions")
+            .select("currency, paystack_customer_code")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (activeSub) {
+            subCurrency = activeSub.currency as "NGN" | "USD";
+            customerCode = activeSub.paystack_customer_code;
+          }
+        } catch {}
+
         const sub: UserSubscription = {
           plan,
           creditsRemaining: data.credits_remaining ?? config.creditsOnSubscribe,
@@ -251,6 +227,8 @@ export function SubscriptionProvider({
           status: data.status ?? "active",
           maxLeadsPerSearch: config.maxLeadsPerSearch,
           canEnrich: config.canEnrich,
+          currency: subCurrency,
+          paystackCustomerCode: customerCode,
         };
         setSubscription(sub);
         saveLocalSubscription(sub);
@@ -283,7 +261,6 @@ export function SubscriptionProvider({
   }, []);
 
   // User changes — background refresh, no loading indicator.
-  // Guards against the mount double-run: only fires when user actually changes.
   const prevUserId = useRef<string | undefined>(undefined);
   useEffect(() => {
     const id = user?.id;
@@ -331,7 +308,7 @@ export function SubscriptionProvider({
           );
         if (error) {
           console.error("Subscription: failed to persist credit consumption:", error.message);
-          // Revert local state on failure so the user sees the real count
+          // Revert local state on failure
           setSubscription(subscription);
           saveLocalSubscription(subscription);
           return false;
@@ -368,6 +345,8 @@ export function SubscriptionProvider({
         canSearch,
         consumeCredit,
         hasFeature,
+        preferredCurrency,
+        setPreferredCurrency: setCurrencyPref,
       }}
     >
       {children}
@@ -380,9 +359,7 @@ export function SubscriptionProvider({
 export function useSubscription(): SubscriptionContextType {
   const context = useContext(SubscriptionContext);
   if (context === undefined) {
-    throw new Error(
-      "useSubscription must be used within a SubscriptionProvider"
-    );
+    throw new Error("useSubscription must be used within a SubscriptionProvider");
   }
   return context;
 }

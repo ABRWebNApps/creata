@@ -1,66 +1,83 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-import { getAuthUser } from '@/lib/admin/check-admin';
-
-const PLAN_PRICES: Record<string, number> = {
-  basic: 10.99,
-  agency: 40.99,
-};
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { getAuthUser } from "@/lib/admin/check-admin";
 
 export async function GET(req: NextRequest) {
   const authed = await getAuthUser(req);
-  if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!authed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    // Get all non-free plans
+    // ── Real payment data ────────────────────────────────────
+    const { data: payments, error: payErr } = await supabaseAdmin
+      .from("payments")
+      .select("*")
+      .eq("status", "success")
+      .order("created_at", { ascending: false });
+
+    if (payErr) throw payErr;
+
+    // ── Subscriptions count ──────────────────────────────────
+    const { data: activeSubs, error: subErr } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, plan, currency")
+      .eq("status", "active");
+
+    if (subErr) throw subErr;
+
+    // ── User plans ───────────────────────────────────────────
     const { data: plansData, error: plansErr } = await supabaseAdmin
-      .from('user_plans')
-      .select('*')
-      .neq('plan', 'free')
-      .order('updated_at', { ascending: false });
+      .from("user_plans")
+      .select("*")
+      .neq("plan", "free");
 
-    if (plansErr) {
-      return NextResponse.json({ error: plansErr.message }, { status: 500 });
+    if (plansErr) throw plansErr;
+
+    // Compute revenue from actual payments
+    let totalRevenueUSD = 0;
+    let totalRevenueNGN = 0;
+    let totalRevenueInUSD = 0;
+    const paymentList = (payments ?? []).map(p => {
+      if (p.currency === "USD") totalRevenueUSD += p.amount;
+      else if (p.currency === "NGN") totalRevenueNGN += p.amount;
+      // Approx USD conversion for total display
+      totalRevenueInUSD += p.currency === "USD" ? p.amount : p.amount / 1500;
+      return {
+        email: p.email,
+        plan: p.plan,
+        amount: p.amount,
+        currency: p.currency,
+        date: p.created_at,
+        reference: p.paystack_reference,
+      };
+    });
+
+    // Plan distribution
+    let basicCount = 0;
+    let proCount = 0;
+    let premiumCount = 0;
+    for (const p of plansData ?? []) {
+      if (p.plan === "basic") basicCount++;
+      else if (p.plan === "pro") proCount++;
+      else if (p.plan === "premium" || p.plan === "agency") premiumCount++;
     }
 
-    // Get all auth users to resolve emails
-    const { data: authUsers, error: authErr } = await supabaseAdmin.auth.admin.listUsers();
-    if (authErr) {
-      return NextResponse.json({ error: authErr.message }, { status: 500 });
-    }
-
-    const userEmailMap = new Map<string, string>();
-    for (const u of authUsers.users) {
-      userEmailMap.set(u.id, u.email ?? 'unknown@email.com');
-    }
-
-    const plans = plansData ?? [];
-
-    let basic_count = 0;
-    let agency_count = 0;
-
-    for (const p of plans) {
-      if (p.plan === 'basic') basic_count++;
-      else if (p.plan === 'agency') agency_count++;
-    }
-
-    const total_subscribers = basic_count + agency_count;
-    const total_revenue = basic_count * PLAN_PRICES.basic + agency_count * PLAN_PRICES.agency;
-
-    const recent_payments = plans.map((p) => ({
-      email: userEmailMap.get(p.user_id) ?? 'unknown@email.com',
-      plan: p.plan,
-      amount: PLAN_PRICES[p.plan] ?? 0,
-      date: p.updated_at ?? p.created_at,
-      reference: p.id,
-    }));
+    const subscriptionDistribution = {
+      basic: (activeSubs ?? []).filter(s => s.plan === "basic").length,
+      pro: (activeSubs ?? []).filter(s => s.plan === "pro").length,
+      premium: (activeSubs ?? []).filter(s => s.plan === "premium").length,
+    };
 
     return NextResponse.json({
-      total_revenue,
-      total_subscribers,
-      basic_count,
-      agency_count,
-      recent_payments,
+      total_revenue: Math.round(totalRevenueInUSD * 100) / 100,
+      total_revenue_usd: totalRevenueUSD,
+      total_revenue_ngn: totalRevenueNGN,
+      total_subscribers: (activeSubs ?? []).length,
+      basic_count: basicCount,
+      pro_count: proCount,
+      premium_count: premiumCount,
+      subscription_distribution: subscriptionDistribution,
+      recent_payments: paymentList.slice(0, 50),
+      payment_count: paymentList.length,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

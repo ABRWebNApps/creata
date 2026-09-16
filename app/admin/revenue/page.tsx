@@ -28,16 +28,22 @@ function SettingsIcon({ className }: { className?: string }) {
 
 type RevenueData = {
   total_revenue: number;
+  total_revenue_usd: number;
+  total_revenue_ngn: number;
   total_subscribers: number;
   basic_count: number;
-  agency_count: number;
+  pro_count: number;
+  premium_count: number;
+  subscription_distribution: { basic: number; pro: number; premium: number };
   recent_payments: {
     email: string;
     plan: string;
     amount: number;
+    currency: string;
     date: string;
     reference: string;
   }[];
+  payment_count: number;
 };
 
 export default function RevenuePage() {
@@ -62,36 +68,55 @@ export default function RevenuePage() {
 
   useEffect(() => { fetchRevenue(); }, []);
 
-  const formatAmount = (amount: number) => `$${amount.toFixed(2)}`;
-
   const statCards = [
     {
-      label: "Total Revenue",
-      value: data ? formatAmount(data.total_revenue) : "—",
+      label: "Total Revenue (USD)",
+      value: data ? `$${data.total_revenue.toFixed(2)}` : "—",
       icon: DollarSign,
       color: "text-green-600 dark:text-green-400",
       bg: "bg-green-100 dark:bg-green-900/30",
     },
     {
-      label: "Subscriptions",
+      label: "Revenue (NGN)",
+      value: data ? `₦${data.total_revenue_ngn.toLocaleString()}` : "—",
+      icon: DollarSign,
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-100 dark:bg-green-900/30",
+    },
+    {
+      label: "Active Subscriptions",
       value: data?.total_subscribers ?? "—",
       icon: CreditCard,
       color: "text-blue-600 dark:text-blue-400",
       bg: "bg-blue-100 dark:bg-blue-900/30",
     },
     {
-      label: "Basic Plans",
-      value: data?.basic_count ?? "—",
+      label: "Total Payments",
+      value: data?.payment_count ?? "—",
       icon: Users,
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-100 dark:bg-amber-900/30",
     },
     {
-      label: "Agency Plans",
-      value: data?.agency_count ?? "—",
+      label: "Basic",
+      value: data?.subscription_distribution?.basic ?? data?.basic_count ?? "—",
+      icon: Users,
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-100 dark:bg-amber-900/30",
+    },
+    {
+      label: "Pro",
+      value: data?.subscription_distribution?.pro ?? data?.pro_count ?? "—",
       icon: Users,
       color: "text-purple-600 dark:text-purple-400",
       bg: "bg-purple-100 dark:bg-purple-900/30",
+    },
+    {
+      label: "Premium",
+      value: data?.subscription_distribution?.premium ?? data?.premium_count ?? "—",
+      icon: Users,
+      color: "text-pink-600 dark:text-pink-400",
+      bg: "bg-pink-100 dark:bg-pink-900/30",
     },
   ];
 
@@ -188,7 +213,7 @@ export default function RevenuePage() {
 
               {/* Stats cards */}
               {data && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
                   {statCards.map((card) => (
                     <div key={card.label} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-6 hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
                       <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-4`}>
@@ -215,6 +240,7 @@ export default function RevenuePage() {
                           <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
                           <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Plan</th>
                           <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                          <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Currency</th>
                           <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Date</th>
                           <th className="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Reference</th>
                         </tr>
@@ -225,14 +251,21 @@ export default function RevenuePage() {
                             <td className="px-6 py-3 font-medium">{pmt.email}</td>
                             <td className="px-6 py-3">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                pmt.plan === 'agency'
+                                pmt.plan === 'premium' || pmt.plan === 'agency'
+                                  ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                                  : pmt.plan === 'pro'
                                   ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                                   : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
                               }`}>
                                 {pmt.plan}
                               </span>
                             </td>
-                            <td className="px-6 py-3 font-mono">{formatAmount(pmt.amount)}</td>
+                            <td className="px-6 py-3 font-mono">
+                              {pmt.currency === "NGN" ? `₦${pmt.amount.toLocaleString()}` : `$${pmt.amount.toFixed(2)}`}
+                            </td>
+                            <td className="px-6 py-3">
+                              <span className="text-xs text-gray-500">{pmt.currency}</span>
+                            </td>
                             <td className="px-6 py-3 text-gray-500 dark:text-gray-400">
                               {new Date(pmt.date).toLocaleDateString("en-US", {
                                 year: "numeric",
