@@ -11,42 +11,8 @@ import { logActivity } from "@/lib/activity-log";
 import { useRouter } from "next/navigation";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
-import InfiniteTestimonials from "@/components/InfiniteTestimonials";
-import CurtainSection from "@/components/CurtainSection";
 import { motion } from "motion/react";
-
-/* ── Scroll-triggered animation hook (bidirectional — Motion-style) ── */
-function useScrollAnimation() {
-  const ref = useRef<HTMLDivElement>(null!);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Toggle visible class based on intersection — fires both ways
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-        } else {
-          entry.target.classList.remove("visible");
-        }
-      },
-      { threshold: 0.08 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return ref;
-}
-
-function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  const ref = useScrollAnimation();
-  const delayClass = delay > 0 ? `delay-${delay}` : "";
-  return (
-    <div ref={ref} className={`animate-on-scroll ${delayClass} ${className}`}>
-      {children}
-    </div>
-  );
-}
+import LandingPage from "@/components/landing/LandingPage";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -117,6 +83,10 @@ export default function Home() {
   }
 
   return (
+    <>
+      {!user ? (
+        <LandingPage />
+      ) : (
     <main className="min-h-screen bg-background text-foreground">
       {/* ── HERO SECTION ── */}
       <section className="relative pt-12 pb-14 sm:pt-24 sm:pb-20 bg-hero-gradient overflow-hidden">
@@ -360,173 +330,22 @@ export default function Home() {
             </div>
           )}
           {results && !loading && <ResultsTable data={results} />}
-        </section>
-      )}
+                  </section>
+                )}
 
-      {!user && (
-      <>
-      {/* ── VALUE PROPOSITION SECTION ── */}
-      <AnimatedSection>
-        <section className="py-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
-              <div>
-                <p className="text-sm font-medium text-blue-600 uppercase tracking-wider mb-3">The problem</p>
-                <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5 text-foreground">
-                  Your next paying customer is scrolling social media right now. You just can't find them.
-                </h2>
-                <p className="text-muted-foreground leading-relaxed mb-8">
-                  Real people looking for what you sell are posting every day on TikTok, Instagram, X, and LinkedIn. But finding them manually takes forever — and by the time you do, someone else already got to them.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    "Search every major platform at once — TikTok, Instagram, X, LinkedIn, Facebook",
-                    "AI finds people who actually match what you offer — not just big follower counts",
-                    "Filter by country, platform, and niche so every lead is worth your time",
-                    "Save leads and come back anytime — your sales pipeline, built in seconds",
-                  ].map((item) => (
-                    <div key={item} className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-muted-foreground text-sm leading-relaxed">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white border border-black/[0.06] rounded-2xl p-8 shadow-sm">
-                <div className="grid grid-cols-2 gap-6">
-                  {[
-                    { label: "Platforms indexed", value: "5+" },
-                    { label: "Avg. discovery time", value: "18s" },
-                    { label: "Leads per search", value: "30-100" },
-                    { label: "Data freshness", value: "Live" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="text-center">
-                      <p className="text-3xl sm:text-4xl font-bold text-blue-600 mb-1">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-
-      <div className="section-divider max-w-7xl mx-auto" />
-
-      {/* ── HOW IT WORKS ── */}
-      <AnimatedSection delay={1}>
-        <section className="py-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-            <p className="text-sm font-medium text-blue-600 uppercase tracking-wider mb-3">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 text-foreground">
-              Three clicks to your next lead
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-16">
-              From idea to pipeline in under a minute. No setup, no onboarding calls.
-            </p>
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { icon: Search, title: "Describe your need", desc: "Type what you're looking for — a niche, a vibe, a location. Our AI understands intent, not just keywords." },
-                { icon: Target, title: "AI finds the match", desc: "We scan millions of active profiles across platforms and rank them by relevance, engagement rate, and audience fit." },
-                { icon: Bookmark, title: "Save & engage", desc: "Bookmark your best leads, track outreach, and export everything — all from one dashboard." },
-              ].map((step, i) => (
-                <div key={step.title} className="p-6 rounded-2xl bg-white border border-black/[0.04] hover:border-blue-200 hover:shadow-md transition-all group">
-                  <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-5 shadow-sm shadow-blue-600/20 group-hover:shadow-md group-hover:shadow-blue-600/30 transition-shadow">
-                    <step.icon className="w-7 h-7 text-white" />
+                {/* Footer */}
+                <footer className="border-t border-black/[0.06] py-8">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      Creata — AI-native lead generation for GTM teams
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      &copy; {new Date().getFullYear()}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">{step.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-
-      <div className="section-divider max-w-7xl mx-auto" />
-
-      {/* ── CURTAIN TRANSITION — 3 Steps to Convert ── */}
-      <CurtainSection />
-
-      <div className="section-divider max-w-7xl mx-auto" />
-
-      {/* ── FEATURES GRID ── */}
-      <AnimatedSection delay={2}>
-        <section className="py-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <p className="text-sm font-medium text-blue-600 uppercase tracking-wider mb-3 text-center">Platform</p>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 text-center text-foreground">
-              Everything you need to build pipeline
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto text-center mb-16">
-              One platform. Five social networks. Infinite pipeline.
-            </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { icon: Globe, title: "Multi-platform search", desc: "TikTok, Instagram, X, LinkedIn, Facebook — one query, every platform." },
-                { icon: Layers, title: "Smart lead scoring", desc: "AI ranks every profile by relevance, engagement, and audience fit — not just followers." },
-                { icon: BarChart3, title: "Pain point analysis", desc: "Search by what people are asking. Find leads who are actively looking for solutions." },
-                { icon: Timer, title: "Live data, always fresh", desc: "Results are pulled in real-time. No stale databases, no outdated lists." },
-                { icon: Target, title: "Geo-targeted discovery", desc: "Filter by country, region, or city. Find leads where you do business." },
-                { icon: Bookmark, title: "Organized pipeline", desc: "Save leads, categorize them, add notes. Your sales workflow, built in seconds." },
-              ].map((feat) => (
-                <div key={feat.title} className="p-6 rounded-xl bg-white border border-black/[0.04] hover:border-blue-100 hover:shadow-sm transition-all">
-                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
-                    <feat.icon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="font-semibold text-base mb-2 text-foreground">{feat.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{feat.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-
-      <div className="section-divider max-w-7xl mx-auto" />
-
-      {/* ── TESTIMONIALS — Infinite Marquee ── */}
-      <InfiniteTestimonials />
-
-      <div className="section-divider max-w-7xl mx-auto" />
-
-      {/* ── CTA ── */}
-      <AnimatedSection delay={4}>
-        <section className="py-24">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-            <div className="p-12 rounded-3xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 shadow-sm">
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5 text-foreground">
-                Ready to build your pipeline?
-              </h2>
-              <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">
-                Join the teams that have turned lead generation from a chore into a cheat code.
-              </p>
-              <Link href="/auth/signup">
-                <Button size="lg" className="text-base px-8 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20">
-                  Start searching <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
-              <p className="text-xs text-muted-foreground mt-4">No credit card required. Free tier to get started.</p>
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-      </>
-
-      )}
-
-      {/* Footer */}
-      <footer className="border-t border-black/[0.06] py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
-            Creata — AI-native lead generation for GTM teams
-          </p>
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
-    </main>
-  );
+                </footer>
+              </main>
+                )}
+              </>
+            );
 }

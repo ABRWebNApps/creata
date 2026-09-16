@@ -99,10 +99,22 @@ export default function Nav() {
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild className="text-foreground hover:text-foreground">
+              <Link
+                href="/landing#features"
+                className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
+              >
+                Product
+              </Link>
+              <Link
+                href="/landing#faq"
+                className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
+              >
+                FAQ
+              </Link>
+              <Button variant="ghost" size="sm" asChild className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]">
                 <Link href="/auth/signin">Sign in</Link>
               </Button>
-              <Button size="sm" asChild className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20">
+              <Button size="sm" asChild className="bg-blue-600 text-white hover:bg-blue-700 shadow-card">
                 <Link href="/auth/signup">Get started</Link>
               </Button>
             </>

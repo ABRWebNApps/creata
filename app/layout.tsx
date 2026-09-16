@@ -1,32 +1,39 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Fraunces, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { SubscriptionProvider } from "@/lib/subscription-context";
 import GlobalBackground from "@/components/GlobalBackground";
 import Nav from "@/components/Nav";
 
-const inter = Inter({ subsets: ["latin"] });
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  axes: ["opsz", "wght"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
 
 export const metadata: Metadata = {
-  title: "Creata — AI-Native Lead Generation for GTM Teams",
+  title: "Creata — Find buyers from what they say, not who follows them",
   description:
-    "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
-  icons: {
-    icon: "/favicon.svg",
-  },
+    "Search TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and get the comment that gave them away.",
+  icons: { icon: "/favicon.svg" },
   openGraph: {
-    title: "Creata — AI-Native Lead Generation for GTM Teams",
+    title: "Creata — AI-native lead generation",
     description:
-      "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
+      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell.",
     siteName: "Creata",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Creata — AI-Native Lead Generation for GTM Teams",
+    title: "Creata — AI-native lead generation",
     description:
-      "Find real people on social media who actually want to buy what you sell. Creata turns any idea into a pipeline of high-intent leads across TikTok, Instagram, X, LinkedIn, and Facebook.",
+      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell.",
   },
 };
 
@@ -37,7 +44,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${fraunces.variable} ${spaceGrotesk.variable} font-body antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <SubscriptionProvider>
             <GlobalBackground>
