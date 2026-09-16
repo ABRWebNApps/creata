@@ -265,19 +265,29 @@ export async function POST(request: NextRequest) {
 async function resolveUserIdByEmail(email: string): Promise<string | null> {
   if (!email) return null;
 
-  // Try direct from auth.users via admin API
-  try {
-    const { data } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-    if (data?.user) return data.user.id;
-  } catch {}
-
-  // Fallback: query user_plans where user's auth email matches
+  // Query auth.users via admin API — list all and find by email
   try {
     const { data: users } = await supabaseAdmin.auth.admin.listUsers();
     const user = users?.users?.find(
       (u: any) => u.email?.toLowerCase() === email.toLowerCase()
     );
     if (user) return user.id;
+  } catch {}
+
+  // Last resort: try user_plans where user's auth email matches
+  try {
+    const { data: allPlans } = await supabaseAdmin
+      .from("user_plans")
+      .select("user_id")
+      .limit(500);
+    if (allPlans && allPlans.length > 0) {
+      const ids = allPlans.map(p => p.user_id);
+      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const match = authUsers?.users?.find(
+        (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+      );
+      if (match) return match.id;
+    }
   } catch {}
 
   return null;
