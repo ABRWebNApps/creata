@@ -28,6 +28,8 @@ type User = {
   search_count: number;
   status: "active" | "suspended" | "blocked";
   isAdmin: boolean;
+  last_active: string | null;
+  created_at: string | null;
 };
 
 const STATUS_BADGE: Record<string, { label: string; classes: string }> = {
@@ -78,7 +80,18 @@ export default function AdminUsersPage() {
     setError(null);
     try {
       const res = await adminFetch("/api/admin/users");
-      const list: User[] = res.users ?? res ?? [];
+      const rawList = res.users ?? res ?? [];
+      const list: User[] = rawList.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        plan: u.plan,
+        credits: u.credits_remaining ?? u.credits ?? 1,
+        search_count: u.search_count ?? 0,
+        status: u.status || "active",
+        isAdmin: u.is_admin ?? u.isAdmin ?? false,
+        last_active: u.last_active || null,
+        created_at: u.created_at || null,
+      }));
       setUsers(list);
       setFiltered(list);
     } catch (err: any) {

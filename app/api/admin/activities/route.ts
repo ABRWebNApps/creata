@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
   const userIdFilter = searchParams.get('user_id');
   const actionFilter = searchParams.get('action');
+  const emailFilter = searchParams.get('email');
 
   const offset = (page - 1) * limit;
 
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 
   if (userIdFilter) query = query.eq('user_id', userIdFilter);
   if (actionFilter) query = query.eq('action', actionFilter);
+  if (emailFilter) query = query.ilike('email', `%${emailFilter}%`);
 
   const { data, error, count } = await query.range(offset, offset + limit - 1);
 
