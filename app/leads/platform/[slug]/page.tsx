@@ -58,9 +58,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ platform: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { platform } = await params;
+  const { slug: platform } = await params;
   const p = PLATFORMS[platform];
   if (!p) {
     return { title: "Platform not found — Creata" };
@@ -68,11 +68,11 @@ export async function generateMetadata({
   return {
     title: `${p.label} Lead Generation — Find Buyers on ${p.label} | Creata`,
     description: p.description,
-    alternates: { canonical: `/leads/${platform}` },
+    alternates: { canonical: `/leads/platform/${platform}` },
     openGraph: {
       title: `Find leads on ${p.label} — Creata Lead & Customer Acquisition Platform`,
       description: p.description,
-      url: `https://creata-enterprise.vercel.app/leads/${platform}`,
+      url: `https://creata-enterprise.vercel.app/leads/platform/${platform}`,
     },
   };
 }
@@ -82,9 +82,9 @@ export async function generateMetadata({
 export default async function PlatformLeadsPage({
   params,
 }: {
-  params: Promise<{ platform: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { platform } = await params;
+  const { slug: platform } = await params;
   const p = PLATFORMS[platform];
 
   if (!p) {
@@ -186,7 +186,7 @@ export default async function PlatformLeadsPage({
               .map(([key, val]) => (
                 <Link
                   key={key}
-                  href={`/leads/${key}`}
+                  href={`/leads/platform/${key}`}
                   className="px-4 py-2 text-sm font-medium bg-[var(--color-paper-tint)] rounded-[10px] text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] hover:bg-blue-50 transition-colors"
                 >
                   Find {val.label} leads

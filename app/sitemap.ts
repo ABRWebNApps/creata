@@ -33,7 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Programmatic platform pages
   const platforms = ["tiktok", "instagram", "x", "linkedin", "facebook"];
   const platformPages: MetadataRoute.Sitemap = platforms.map((platform) => ({
-    url: `${BASE_URL}/leads/${platform}`,
+    url: `${BASE_URL}/leads/platform/${platform}`,
     lastModified: new Date(),
     changeFrequency: "weekly",
     priority: 0.7,

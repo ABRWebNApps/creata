@@ -20,13 +20,13 @@ export default function LandingFooter() {
             <Link href="/pricing" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               Pricing
             </Link>
-            <Link href="/leads/tiktok" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+            <Link href="/leads/platform/tiktok" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               TikTok leads
             </Link>
-            <Link href="/leads/instagram" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+            <Link href="/leads/platform/instagram" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               Instagram leads
             </Link>
-            <Link href="/leads/linkedin" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+            <Link href="/leads/platform/linkedin" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               LinkedIn leads
             </Link>
             <a href="mailto:support@creata.tech" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">

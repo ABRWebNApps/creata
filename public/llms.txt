@@ -13,11 +13,11 @@ Creata is a Lead & Customer Acquisition Platform. It searches TikTok, Instagram,
 - Account: https://creata-enterprise.vercel.app/account — subscription management, credits
 
 ## Platform lead pages (programmatic SEO)
-- TikTok leads: https://creata-enterprise.vercel.app/leads/tiktok
-- Instagram leads: https://creata-enterprise.vercel.app/leads/instagram
-- X/Twitter leads: https://creata-enterprise.vercel.app/leads/x
-- LinkedIn leads: https://creata-enterprise.vercel.app/leads/linkedin
-- Facebook leads: https://creata-enterprise.vercel.app/leads/facebook
+- TikTok leads: https://creata-enterprise.vercel.app/leads/platform/tiktok
+- Instagram leads: https://creata-enterprise.vercel.app/leads/platform/instagram
+- X/Twitter leads: https://creata-enterprise.vercel.app/leads/platform/x
+- LinkedIn leads: https://creata-enterprise.vercel.app/leads/platform/linkedin
+- Facebook leads: https://creata-enterprise.vercel.app/leads/platform/facebook
 
 ## Features
 - Search by intent across 5 social platforms simultaneously
