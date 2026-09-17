@@ -136,7 +136,9 @@ export default function LandingPage() {
       <StatementBlock />
 
       {/* ── FAQ ── */}
-      <FAQAccordion />
+      <div id="faq">
+        <FAQAccordion />
+      </div>
 
       {/* ── Testimonials ── */}
       <InfiniteTestimonials />

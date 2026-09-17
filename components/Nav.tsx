@@ -103,6 +103,12 @@ export default function Nav() {
                 href="/#features"
                 className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
               >
+                How it works
+              </Link>
+              <Link
+                href="/#features"
+                className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
+              >
                 Product
               </Link>
               <Link
