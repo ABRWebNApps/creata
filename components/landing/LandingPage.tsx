@@ -62,22 +62,26 @@ export default function LandingPage() {
                 <span className="block animate-slide-up" style={{ animationDelay: "0.1s" }}>
                   Most tools find profiles.
                 </span>
-                <span className="block text-blue-600 mt-2 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                <span className="block text-blue-600 mt-1 sm:mt-2 animate-slide-up" style={{ animationDelay: "0.3s" }}>
                   Creata finds the moment
                 </span>
-                <span className="block mt-2 animate-slide-up" style={{ animationDelay: "0.5s" }}>
+                <span className="block mt-1 sm:mt-2 animate-slide-up" style={{ animationDelay: "0.5s" }}>
                   someone was ready to buy.
-                </span>
-                <span className="block mt-1 text-sm sm:text-base font-body font-normal text-[var(--color-ink-soft)] animate-slide-up" style={{ animationDelay: "0.6s" }}>
-                  Lead &amp; Customer Acquisition Platform
                 </span>
               </h1>
 
               <p
-                className="text-sm sm:text-lg text-[var(--color-ink-soft)] leading-relaxed mt-4 sm:mt-6 max-w-lg animate-fade-in"
+                className="text-[11px] sm:text-base text-[var(--color-ink-soft)] font-body animate-slide-up mt-1 sm:mt-2"
+                style={{ animationDelay: "0.6s" }}
+              >
+                Lead &amp; Customer Acquisition Platform
+              </p>
+
+              <p
+                className="text-xs sm:text-base lg:text-lg text-[var(--color-ink-soft)] leading-relaxed mt-3 sm:mt-6 max-w-lg animate-fade-in"
                 style={{ animationDelay: "0.7s" }}
               >
-                Creata is a <strong>Lead &amp; Customer Acquisition Platform</strong>. Search TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and get the comment that gave them away, plus the pain point analysis that tells you exactly what to say next.
+                Creata is a <strong>Lead &amp; Customer Acquisition Platform</strong>. Search TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and get the buying signal plus the pain point analysis that tells you what to say next.
               </p>
 
               <div

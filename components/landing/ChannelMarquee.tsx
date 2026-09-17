@@ -4,9 +4,9 @@ const CHANNELS = ["TikTok", "Instagram", "X", "LinkedIn", "Facebook"];
 
 export default function ChannelMarquee() {
   return (
-    <section className="py-10 sm:py-14">
-      <div className="marquee-track">
-        <div className="marquee-content">
+    <section className="py-10 sm:py-14 overflow-hidden">
+      <div className="marquee-left-track">
+        <div className="marquee-left-content">
           {/* First set */}
           {CHANNELS.map((name) => (
             <span

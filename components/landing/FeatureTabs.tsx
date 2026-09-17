@@ -114,17 +114,17 @@ export default function FeatureTabs() {
               </p>
 
               {/* Mock data view */}
-              <div className="rounded-[18px] bg-[var(--color-paper-tint)] p-4 sm:p-5 space-y-2 sm:space-y-3">
+              <div className="rounded-[18px] bg-[var(--color-paper-tint)] p-3 sm:p-5 space-y-2 sm:space-y-3">
                 {panel.data.map((row) => (
                   <div
                     key={row.pip}
-                    className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 rounded-[10px] bg-white card-shadow"
+                    className="flex items-center gap-2 sm:gap-4 px-2.5 sm:px-4 py-2 sm:py-3 rounded-[10px] bg-white card-shadow"
                   >
-                    <span className="text-base sm:text-lg flex-shrink-0">{row.pip}</span>
-                    <span className="text-xs sm:text-sm font-medium text-[var(--color-ink)] flex-1">
+                    <span className="text-sm sm:text-lg flex-shrink-0">{row.pip}</span>
+                    <span className="text-xs sm:text-sm font-medium text-[var(--color-ink)] flex-1 min-w-0">
                       {row.label}
                     </span>
-                    <span className="text-xs sm:text-sm text-[var(--color-ink-soft)] font-mono">
+                    <span className="text-[10px] sm:text-sm text-[var(--color-ink-soft)] font-mono text-right leading-tight max-w-[35%] sm:max-w-none">
                       {row.value}
                     </span>
                   </div>
