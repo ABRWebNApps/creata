@@ -33,6 +33,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: "https://creata-enterprise.vercel.app/sitemap.xml",
+    sitemap: "https://creata.tech/sitemap.xml",
   };
 }

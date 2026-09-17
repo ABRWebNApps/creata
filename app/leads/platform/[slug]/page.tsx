@@ -72,7 +72,7 @@ export async function generateMetadata({
     openGraph: {
       title: `Find leads on ${p.label} — Creata Lead & Customer Acquisition Platform`,
       description: p.description,
-      url: `https://creata-enterprise.vercel.app/leads/platform/${platform}`,
+      url: `https://creata.tech/leads/platform/${platform}`,
     },
   };
 }

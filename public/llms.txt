@@ -1,23 +1,23 @@
 # Creata — Lead & Customer Acquisition Platform
-https://creata-enterprise.vercel.app
+https://creata.tech
 
 ## What is Creata?
 Creata is a Lead & Customer Acquisition Platform. It searches TikTok, Instagram, X (Twitter), LinkedIn, and Facebook for people who have posted content that signals they need a specific product or service. Instead of returning profile lists, Creata surfaces the exact comment, caption, or question that reveals buying intent — plus pain point analysis that tells a sales team exactly what to say in their first outreach.
 
 ## Key pages
-- Homepage: https://creata-enterprise.vercel.app — product overview, feature tabs, testimonials, FAQ
-- Pricing: https://creata-enterprise.vercel.app/pricing — plan tiers, credit system, top-up pricing
-- Sign in: https://creata-enterprise.vercel.app/auth/signin
-- Sign up: https://creata-enterprise.vercel.app/auth/signup
-- My Leads: https://creata-enterprise.vercel.app/leads — saved lead pipeline (requires auth)
-- Account: https://creata-enterprise.vercel.app/account — subscription management, credits
+- Homepage: https://creata.tech — product overview, feature tabs, testimonials, FAQ
+- Pricing: https://creata.tech/pricing — plan tiers, credit system, top-up pricing
+- Sign in: https://creata.tech/auth/signin
+- Sign up: https://creata.tech/auth/signup
+- My Leads: https://creata.tech/leads — saved lead pipeline (requires auth)
+- Account: https://creata.tech/account — subscription management, credits
 
 ## Platform lead pages (programmatic SEO)
-- TikTok leads: https://creata-enterprise.vercel.app/leads/platform/tiktok
-- Instagram leads: https://creata-enterprise.vercel.app/leads/platform/instagram
-- X/Twitter leads: https://creata-enterprise.vercel.app/leads/platform/x
-- LinkedIn leads: https://creata-enterprise.vercel.app/leads/platform/linkedin
-- Facebook leads: https://creata-enterprise.vercel.app/leads/platform/facebook
+- TikTok leads: https://creata.tech/leads/platform/tiktok
+- Instagram leads: https://creata.tech/leads/platform/instagram
+- X/Twitter leads: https://creata.tech/leads/platform/x
+- LinkedIn leads: https://creata.tech/leads/platform/linkedin
+- Facebook leads: https://creata.tech/leads/platform/facebook
 
 ## Features
 - Search by intent across 5 social platforms simultaneously

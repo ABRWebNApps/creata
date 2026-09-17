@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "Pricing — Creata Lead & Customer Acquisition Platform",
     description:
       "Free, Basic, Pro, and Premium plans. Credits roll over, top up from $5. Search social media for leads with buying intent.",
-    url: "https://creata-enterprise.vercel.app/pricing",
+    url: "https://creata.tech/pricing",
   },
 };
 

@@ -13,7 +13,7 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Creata",
-    url: "https://creata-enterprise.vercel.app",
+    url: "https://creata.tech",
     description:
       "Creata is a Lead & Customer Acquisition Platform that searches social media by buying intent and provides pain point analysis to help sales teams convert leads faster.",
     applicationCategory: "Sales Intelligence",
