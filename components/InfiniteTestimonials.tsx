@@ -97,10 +97,10 @@ export default function InfiniteTestimonials() {
         </p>
       </div>
 
-      {/* Marquee row 1 — scrolling left */}
-      <div className="relative mb-6">
-        <div className="marquee-track">
-          <div className="marquee-content marquee-left">
+      {/* Marquee row 1 — scrolling LEFT (-50%) */}
+      <div className="relative mb-6 overflow-hidden w-full mask-edges">
+        <div className="marquee-left-track">
+          <div className="marquee-left-content">
             {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
               <TestimonialCard key={`r1-${i}`} t={t} />
             ))}
@@ -108,11 +108,11 @@ export default function InfiniteTestimonials() {
         </div>
       </div>
 
-      {/* Marquee row 2 — scrolling right (reverse) */}
-      <div className="relative">
-        <div className="marquee-track">
-          <div className="marquee-content marquee-right">
-            {[...testimonials, ...testimonials, ...testimonials].reverse().map((t, i) => (
+      {/* Marquee row 2 — scrolling RIGHT (+50%) — visually reversed */}
+      <div className="relative overflow-hidden w-full mask-edges">
+        <div className="marquee-right-track">
+          <div className="marquee-right-content">
+            {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
               <TestimonialCard key={`r2-${i}`} t={t} />
             ))}
           </div>

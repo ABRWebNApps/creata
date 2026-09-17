@@ -100,13 +100,13 @@ export default function Nav() {
           ) : (
             <>
               <Link
-                href="/landing#features"
+                href="/#features"
                 className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
               >
                 Product
               </Link>
               <Link
-                href="/landing#faq"
+                href="/#faq"
                 className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors"
               >
                 FAQ

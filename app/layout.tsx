@@ -1,39 +1,33 @@
 import type { Metadata } from "next";
-import { Fraunces, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { SubscriptionProvider } from "@/lib/subscription-context";
 import GlobalBackground from "@/components/GlobalBackground";
 import Nav from "@/components/Nav";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  axes: ["opsz", "wght"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-});
-
 export const metadata: Metadata = {
-  title: "Creata — Find buyers from what they say, not who follows them",
+  title: "Creata — Lead & Customer Acquisition Platform | Find Buyers With Buying Intent",
   description:
-    "Search TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and get the comment that gave them away.",
+    "Creata is a lead and customer acquisition platform that searches TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and surfaces the buying intent, plus pain point analysis that tells you exactly what to say next.",
   icons: { icon: "/favicon.svg" },
+  metadataBase: new URL("https://creata-enterprise.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Creata — AI-native lead generation",
+    title: "Creata — Lead & Customer Acquisition Platform",
     description:
-      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell.",
+      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell, with pain point analysis and an AI-suggested opening line.",
+    url: "https://creata-enterprise.vercel.app",
     siteName: "Creata",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Creata — AI-native lead generation",
+    title: "Creata — Lead & Customer Acquisition Platform",
     description:
-      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell.",
+      "Search social platforms by intent, not follower count. Find real people who just told the internet they need what you sell, with pain point analysis and an AI-suggested opening line.",
   },
 };
 
@@ -44,7 +38,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${fraunces.variable} ${spaceGrotesk.variable} font-body antialiased`} suppressHydrationWarning>
+      <body className="font-body antialiased" suppressHydrationWarning>
         <AuthProvider>
           <SubscriptionProvider>
             <GlobalBackground>

@@ -16,15 +16,21 @@ export default function LandingFooter() {
           </Link>
 
           {/* Links */}
-          <nav className="flex items-center gap-6 text-sm">
+          <nav className="flex items-center gap-4 text-sm flex-wrap justify-center">
             <Link href="/pricing" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               Pricing
             </Link>
+            <Link href="/leads/tiktok" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+              TikTok leads
+            </Link>
+            <Link href="/leads/instagram" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+              Instagram leads
+            </Link>
+            <Link href="/leads/linkedin" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
+              LinkedIn leads
+            </Link>
             <a href="mailto:support@creata.tech" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               Contact
-            </a>
-            <a href="#" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
-              Privacy
             </a>
           </nav>
         </div>

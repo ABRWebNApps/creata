@@ -1,0 +1,39 @@
+# Creata — Lead & Customer Acquisition Platform
+https://creata-enterprise.vercel.app
+
+## What is Creata?
+Creata is a Lead & Customer Acquisition Platform. It searches TikTok, Instagram, X (Twitter), LinkedIn, and Facebook for people who have posted content that signals they need a specific product or service. Instead of returning profile lists, Creata surfaces the exact comment, caption, or question that reveals buying intent — plus pain point analysis that tells a sales team exactly what to say in their first outreach.
+
+## Key pages
+- Homepage: https://creata-enterprise.vercel.app — product overview, feature tabs, testimonials, FAQ
+- Pricing: https://creata-enterprise.vercel.app/pricing — plan tiers, credit system, top-up pricing
+- Sign in: https://creata-enterprise.vercel.app/auth/signin
+- Sign up: https://creata-enterprise.vercel.app/auth/signup
+- My Leads: https://creata-enterprise.vercel.app/leads — saved lead pipeline (requires auth)
+- Account: https://creata-enterprise.vercel.app/account — subscription management, credits
+
+## Platform lead pages (programmatic SEO)
+- TikTok leads: https://creata-enterprise.vercel.app/leads/tiktok
+- Instagram leads: https://creata-enterprise.vercel.app/leads/instagram
+- X/Twitter leads: https://creata-enterprise.vercel.app/leads/x
+- LinkedIn leads: https://creata-enterprise.vercel.app/leads/linkedin
+- Facebook leads: https://creata-enterprise.vercel.app/leads/facebook
+
+## Features
+- Search by intent across 5 social platforms simultaneously
+- See the exact trigger (comment/caption/question) that reveals buying intent
+- AI-powered pain point analysis — extracts what's broken for each lead, severity, and a suggested opening line
+- Enrich leads in one click — email, bio links, cross-platform handles
+- Credits roll over, top up from $5
+
+## FAQ
+- Q: What counts as a lead? A: A real person on TikTok, Instagram, X, LinkedIn, or Facebook who posted something matching what you sell. Not a bot or mass-scraped email.
+- Q: How is Creata different from a regular scraper? A: Scrapers collect profiles. Creata collects intent — the actual words people typed that tell you they need your product.
+- Q: What happens when credits run out? A: Credits roll over monthly. Top up from $5 in your account. Paid plan credits refill every billing cycle.
+- Q: Does enrichment cost extra? A: Included in Pro and Premium plans. Free/Basic plans get search results only.
+
+## Founders / team
+Creata is built by ABRWebNApps. No public team page.
+
+## Related
+Lead generation, buying intent, social media prospecting, sales intelligence, pain point analysis, GTM tools, customer acquisition.

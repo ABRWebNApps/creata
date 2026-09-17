@@ -49,10 +49,10 @@ function StatCounter({ target, suffix, label }: { target: number; suffix: string
 
   return (
     <div ref={ref} className="text-center sm:text-left">
-      <p className="text-4xl sm:text-5xl font-display font-bold text-blue-600 mb-1 tracking-tight">
+      <p className="text-3xl sm:text-5xl font-display font-bold text-blue-600 mb-1 tracking-tight">
         {visible ? display : target === 0 ? "0" : `0${suffix}`}
       </p>
-      <p className="text-sm text-[var(--color-ink-soft)] leading-snug max-w-[200px]">
+      <p className="text-xs sm:text-sm text-[var(--color-ink-soft)] leading-snug">
         {label}
       </p>
     </div>
@@ -61,9 +61,9 @@ function StatCounter({ target, suffix, label }: { target: number; suffix: string
 
 export default function StatBar() {
   return (
-    <section className="py-14 sm:py-20">
+    <section className="py-12 sm:py-20">
       <div className="max-w-[1180px] mx-auto px-[20px] sm:px-8">
-        <div className="flex flex-col sm:flex-row gap-10 sm:gap-16 sm:items-start">
+        <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 sm:items-start">
           {STATS.map((stat, i) => (
             <StatCounter key={i} target={stat.value} suffix={stat.suffix} label={stat.label} />
           ))}

@@ -26,6 +26,17 @@ const TABS = [
     ],
   },
   {
+    id: "painpoints",
+    label: "Analyze pain points",
+    headline: "Know what's actually broken before you reach out.",
+    body: "Every lead's profile is analyzed to surface their real problems — not just keywords. Creata identifies the pain, assigns severity, and suggests a solution angle so your first message lands.",
+    data: [
+      { pip: "🧠", label: "Pain extracted", value: "From bio + posts" },
+      { pip: "📋", label: "Severity rating", value: "High / Medium / Low" },
+      { pip: "💡", label: "Solution angle", value: "Suggested opening" },
+    ],
+  },
+  {
     id: "enrich",
     label: "Enrich in one click",
     headline: "One click from lead to outreach.",
@@ -55,28 +66,28 @@ export default function FeatureTabs() {
   const panel = TABS.find(t => t.id === active) ?? TABS[0];
 
   return (
-    <section className="py-20 sm:py-28">
+    <section className="py-14 sm:py-28">
       <div className="max-w-[1180px] mx-auto px-[20px] sm:px-8">
         {/* Headline */}
-        <div className="mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-[var(--color-ink)]">
+        <div className="mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight text-[var(--color-ink)]">
             Search by intent.
           </h2>
-          <p className="text-lg text-[var(--color-ink-soft)] mt-2 max-w-xl">
+          <p className="text-sm sm:text-lg text-[var(--color-ink-soft)] mt-2 max-w-xl">
             See the trigger. Enrich in one click. Top up, don&apos;t wait.
           </p>
         </div>
 
         <div className="lg:flex lg:gap-16">
           {/* Tab list — sticky on desktop */}
-          <div className="lg:sticky lg:top-28 lg:self-start flex lg:flex-col gap-2 mb-8 lg:mb-0 lg:w-56 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+          <div className="lg:sticky lg:top-28 lg:self-start flex lg:flex-col gap-2 mb-6 lg:mb-0 lg:w-56 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
             {TABS.map((tab) => {
               const isActive = active === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActive(tab.id)}
-                  className={`flex-shrink-0 px-5 py-3 text-sm font-medium rounded-[10px] text-left transition-all ${
+                  className={`flex-shrink-0 px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-medium rounded-[10px] text-left transition-all ${
                     isActive
                       ? "bg-blue-600 text-white shadow-card"
                       : "text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-tint)]"
@@ -93,27 +104,27 @@ export default function FeatureTabs() {
           <div className="flex-1">
             <div
               key={panel.id}
-              className="card-shadow rounded-[28px] bg-white p-8 sm:p-10 animate-fade-in"
+              className="card-shadow rounded-[28px] bg-white p-6 sm:p-10 animate-fade-in"
             >
-              <h3 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-[var(--color-ink)] mb-4">
+              <h3 className="text-xl sm:text-3xl font-display font-bold tracking-tight text-[var(--color-ink)] mb-3 sm:mb-4">
                 {panel.headline}
               </h3>
-              <p className="text-base sm:text-lg text-[var(--color-ink-soft)] leading-relaxed mb-8 max-w-2xl">
+              <p className="text-sm sm:text-lg text-[var(--color-ink-soft)] leading-relaxed mb-6 sm:mb-8 max-w-2xl">
                 {panel.body}
               </p>
 
               {/* Mock data view */}
-              <div className="rounded-[18px] bg-[var(--color-paper-tint)] p-5 space-y-3">
+              <div className="rounded-[18px] bg-[var(--color-paper-tint)] p-4 sm:p-5 space-y-2 sm:space-y-3">
                 {panel.data.map((row) => (
                   <div
                     key={row.pip}
-                    className="flex items-center gap-4 px-4 py-3 rounded-[10px] bg-white card-shadow"
+                    className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 rounded-[10px] bg-white card-shadow"
                   >
-                    <span className="text-lg flex-shrink-0">{row.pip}</span>
-                    <span className="text-sm font-medium text-[var(--color-ink)] flex-1">
+                    <span className="text-base sm:text-lg flex-shrink-0">{row.pip}</span>
+                    <span className="text-xs sm:text-sm font-medium text-[var(--color-ink)] flex-1">
                       {row.label}
                     </span>
-                    <span className="text-sm text-[var(--color-ink-soft)] font-mono">
+                    <span className="text-xs sm:text-sm text-[var(--color-ink-soft)] font-mono">
                       {row.value}
                     </span>
                   </div>

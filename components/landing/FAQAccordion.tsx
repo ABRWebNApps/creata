@@ -21,6 +21,30 @@ const FAQS = [
   },
 ];
 
+function FAQPageSchema() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.a,
+      },
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(faqSchema),
+      }}
+    />
+  );
+}
+
 export default function FAQAccordion() {
   const [open, setOpen] = useState<string | null>(null);
 
@@ -29,14 +53,15 @@ export default function FAQAccordion() {
   };
 
   return (
-    <section className="py-20 sm:py-28">
+    <section className="py-14 sm:py-28">
+      <FAQPageSchema />
       <div className="max-w-[1180px] mx-auto px-[20px] sm:px-8">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-[var(--color-ink)] mb-12">
+          <h2 className="text-2xl sm:text-4xl font-display font-bold tracking-tight text-[var(--color-ink)] mb-10 sm:mb-12">
             Asked before
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {FAQS.map((faq) => {
               const isOpen = open === faq.q;
               return (
@@ -47,11 +72,11 @@ export default function FAQAccordion() {
                   <button
                     onClick={() => toggle(faq.q)}
                     aria-expanded={isOpen}
-                    className="flex items-center justify-between w-full px-6 py-5 text-left font-display italic text-lg font-semibold text-[var(--color-ink)] hover:text-blue-600 transition-colors"
+                    className="flex items-center justify-between w-full px-4 sm:px-6 py-4 sm:py-5 text-left font-display italic text-base sm:text-lg font-semibold text-[var(--color-ink)] hover:text-blue-600 transition-colors"
                   >
                     <span>{faq.q}</span>
                     <span
-                      className={`flex-shrink-0 w-5 h-5 text-[var(--color-ink-soft)] transition-transform duration-300 ${
+                      className={`flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 text-[var(--color-ink-soft)] transition-transform duration-300 ${
                         isOpen ? "rotate-45" : ""
                       }`}
                     >
@@ -66,7 +91,7 @@ export default function FAQAccordion() {
                       isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                     }`}
                   >
-                    <div className="px-6 pb-5 text-sm text-[var(--color-ink-soft)] leading-relaxed">
+                    <div className="px-4 sm:px-6 pb-5 text-xs sm:text-sm text-[var(--color-ink-soft)] leading-relaxed">
                       {faq.a}
                     </div>
                   </div>
