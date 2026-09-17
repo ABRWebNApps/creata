@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   title: "Creata — Lead & Customer Acquisition Platform | Find Buyers With Buying Intent",
   description:
     "Creata is a lead and customer acquisition platform that searches TikTok, Instagram, X, LinkedIn and Facebook by what people are actually saying — a complaint, a question, a caption — and surfaces the buying intent, plus pain point analysis that tells you exactly what to say next.",
-  icons: { icon: "/favicon.svg" },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: { url: "/favicon.svg", type: "image/svg+xml" },
+  },
   metadataBase: new URL("https://creata.tech"),
   alternates: {
     canonical: "/",
