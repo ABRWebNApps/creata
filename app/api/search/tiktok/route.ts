@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints } from "../utils";
+import { suggestPainPoints, isHighValueLead } from "../utils";
 
 type TikTokCreator = {
   handle: string;
@@ -113,7 +113,12 @@ export async function POST(request: NextRequest) {
           if (uniqueHandles.has(author.unique_id)) continue;
 
           const matchedDesc = item.aweme_info?.desc || null;
-                    uniqueHandles.set(author.unique_id, {
+                    // Relevance pre-filter: skip if matched content doesn't relate to any keyword
+                    if (matchedDesc && !keywords.some((kw: string) => {
+                      const fragments = kw.toLowerCase().split(/\s+/);
+                      return fragments.some((frag: string) => matchedDesc!.toLowerCase().includes(frag));
+                    })) continue;
+                              uniqueHandles.set(author.unique_id, {
                       handle: author.unique_id,
                       nickname: author.nickname || author.unique_id,
                       follower_count: author.follower_count || 0,
@@ -187,9 +192,11 @@ export async function POST(request: NextRequest) {
             const score = calcScore(stats.followerCount, engagementRate, email !== null);
 
             if (minFollowers !== undefined && minFollowers !== null && stats.followerCount < minFollowers) continue;
-                        if (maxFollowers !== undefined && maxFollowers !== null && stats.followerCount > maxFollowers) continue;
+                                    if (maxFollowers !== undefined && maxFollowers !== null && stats.followerCount > maxFollowers) continue;
 
-                        creators.push({
+                                    if (!isHighValueLead(user.signature || null, entry.matched_comment || null, keywords)) continue;
+
+                                    creators.push({
                                                   handle: user.uniqueId,
                                       nickname: user.nickname,
                                       platform: "tiktok",
@@ -221,30 +228,31 @@ export async function POST(request: NextRequest) {
             ? parseFloat((Math.random() * 3 + 2).toFixed(2))
             : parseFloat((Math.random() * 5 + 3).toFixed(2));
 
-          creators.push({
-                      handle: entry.handle,
-                      nickname: entry.nickname,
-                      platform: "tiktok",
-                      profile_url: `https://tiktok.com/@${entry.handle}`,
-                      avatar: entry.avatar,
-                      bio: entry.bio || null,
-                      bioLink: null,
-                      verified: entry.verified,
-                      followers: followerCount,
-                      following: 0,
-                      total_likes: 0,
-                      video_count: 0,
-                      engagement_rate: estEngagement,
-                      email: null,
-                      instagram_handle: null,
-                                  profile_fetched: false,
-                                                          pain_points: suggestPainPoints(entry.bio || null),
-                                                          score: calcScore(followerCount, estEngagement, false),
-                                                          matched_comment: entry.matched_comment || null,
-                                                          matched_caption: entry.matched_caption || null,
-                                                        });
-                    }
-                  }
+          if (!isHighValueLead(entry.bio || null, entry.matched_comment || null, keywords)) continue;
+                    creators.push({
+                                handle: entry.handle,
+                                nickname: entry.nickname,
+                                platform: "tiktok",
+                                profile_url: `https://tiktok.com/@${entry.handle}`,
+                                avatar: entry.avatar,
+                                bio: entry.bio || null,
+                                bioLink: null,
+                                verified: entry.verified,
+                                followers: followerCount,
+                                following: 0,
+                                total_likes: 0,
+                                video_count: 0,
+                                engagement_rate: estEngagement,
+                                email: null,
+                                instagram_handle: null,
+                                            profile_fetched: false,
+                                                                    pain_points: suggestPainPoints(entry.bio || null),
+                                                                    score: calcScore(followerCount, estEngagement, false),
+                                                                    matched_comment: entry.matched_comment || null,
+                                                                    matched_caption: entry.matched_caption || null,
+                                                                  });
+                              }
+                            }
                 }
 
 
@@ -260,7 +268,9 @@ export async function POST(request: NextRequest) {
         ? parseFloat((Math.random() * 3 + 2).toFixed(2))
         : parseFloat((Math.random() * 5 + 3).toFixed(2));
 
-      creators.push({
+              if (!isHighValueLead(entry.bio || null, entry.matched_comment || null, keywords)) continue;
+
+              creators.push({
               handle: entry.handle,
               nickname: entry.nickname,
               platform: "tiktok",

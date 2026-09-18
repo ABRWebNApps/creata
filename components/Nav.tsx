@@ -54,7 +54,7 @@ export default function Nav() {
               )}
               <Link
                 href="/leads"
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
                   pathname === "/leads"
                     ? "bg-blue-600 text-white"
                     : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
@@ -65,7 +65,7 @@ export default function Nav() {
               </Link>
               <Link
                 href="/pricing"
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
                   pathname === "/pricing"
                     ? "bg-blue-600 text-white"
                     : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
@@ -76,7 +76,7 @@ export default function Nav() {
               </Link>
               <Link
                 href="/account"
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
                   pathname === "/account"
                     ? "bg-blue-600 text-white"
                     : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
@@ -88,7 +88,7 @@ export default function Nav() {
               <div className="h-5 w-px bg-border mx-1" />
               <Link
                 href="/settings"
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-blue-50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-blue-50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
               >
                 <Settings className="w-4 h-4" />
               </Link>

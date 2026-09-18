@@ -20,6 +20,12 @@
   --color-foreground: var(--color-ink);
   --color-muted: var(--color-paper-tint);
   --color-muted-foreground: var(--color-ink-soft);
+  --color-popover: var(--color-paper);
+  --color-popover-foreground: var(--color-ink);
+  --color-accent: var(--color-blue-soft);
+  --color-accent-foreground: var(--color-ink);
+  --color-card: var(--color-paper);
+  --color-card-foreground: var(--color-ink);
   --color-border: rgba(3, 22, 59, 0.08);
   --color-input: rgba(3, 22, 59, 0.1);
   --color-ring: var(--color-blue);
@@ -43,6 +49,41 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* ── Base layer: override default border color (preflight uses currentColor = dark text) ── */
+
+/* Strip native select appearance globally */
+select {
+  appearance: none;
+}
+
+/* ── Force light border on all border utilities (Tailwind v4 .border doesn't set color) ── */
+.border {
+  border-color: var(--color-border);
+}
+.border-2 {
+  border-color: var(--color-border);
+}
+.border-b {
+  border-bottom-color: var(--color-border);
+}
+.border-t {
+  border-top-color: var(--color-border);
+}
+
+/* ── Force popover background ── */
+.bg-popover {
+  background-color: #ffffff !important;
+}
+.text-popover-foreground {
+  color: #0b1b33 !important;
+}
+.bg-accent {
+  background-color: #eef2ff !important;
+}
+.text-accent-foreground {
+  color: #0b1b33 !important;
 }
 
 /* ── Utility classes ── */

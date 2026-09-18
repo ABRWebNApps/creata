@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints } from "../utils";
+import { suggestPainPoints, isHighValueLead } from "../utils";
 
 type XCreator = {
   handle: string;
@@ -164,6 +164,8 @@ export async function POST(request: NextRequest) {
 
       const score = calcScore(followerCount, engagementRate, email !== null);
 
+      if (!isHighValueLead(profileData.description || null, pendingProfiles.find(p => p.username === username)?.matched_comment || null, keywords)) continue;
+
       creators.push({
         handle: profileData.username,
         nickname: profileData.name || profileData.username,
@@ -198,6 +200,8 @@ export async function POST(request: NextRequest) {
       const followerCount = entry.basicInfo.followers_count || 0;
       if (minFollowers !== undefined && minFollowers !== null && followerCount < minFollowers) continue;
       if (maxFollowers !== undefined && maxFollowers !== null && followerCount > maxFollowers) continue;
+
+      if (!isHighValueLead(entry.basicInfo.caption || null, entry.matched_comment || null, keywords)) continue;
 
       creators.push({
         handle: entry.username,

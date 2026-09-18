@@ -57,6 +57,7 @@ export default function Home() {
           searchMode,
           minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
           maxFollowers: maxFollowers ? parseInt(maxFollowers) : undefined,
+          maxLeads: subscription?.maxLeadsPerSearch,
         }),
       });
 

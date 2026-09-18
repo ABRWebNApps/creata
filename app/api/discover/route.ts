@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, tier = "Global", platform = "tiktok", searchMode = "leads", minFollowers, maxFollowers } = await request.json();
+    const { query, tier = "Global", platform = "tiktok", searchMode = "leads", minFollowers, maxFollowers, maxLeads } = await request.json();
 
     if (!query) {
       return NextResponse.json(
@@ -62,10 +62,15 @@ export async function POST(request: NextRequest) {
     const searchData = await searchResponse.json();
     console.log(`✅ Found ${searchData.total_found} ${platform} creators`);
 
-    return NextResponse.json({
-      success: true,
-      total_found: searchData.total_found,
-      creators: searchData.creators,
+        // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
+        const cappedCreators = maxLeads && searchData.creators?.length > maxLeads
+          ? searchData.creators.slice(0, maxLeads)
+          : searchData.creators;
+
+        return NextResponse.json({
+          success: true,
+          total_found: cappedCreators.length,
+          creators: cappedCreators,
       platform: platform,
       keywords: keywordData.keywords,
       niche: keywordData.niche,

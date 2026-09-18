@@ -269,14 +269,14 @@ export default function CategoryDetailPage({
               <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full text-2xl font-bold bg-background border rounded-lg px-3 py-2"
+                className="w-full text-2xl font-bold bg-background border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
                 autoFocus
               />
               <input
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
                 placeholder="Description"
-                className="w-full text-sm text-muted-foreground bg-background border rounded-lg px-3 py-2"
+                className="w-full text-sm text-muted-foreground bg-background border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
               />
               <div className="flex gap-2">
                 <button
@@ -323,13 +323,13 @@ export default function CategoryDetailPage({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name or handle..."
-                className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg bg-background"
+                className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg bg-background outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
             <select
               value={filterPlatform}
               onChange={(e) => setFilterPlatform(e.target.value as any)}
-              className="border rounded-lg px-3 py-2 text-sm bg-background"
+              className="border rounded-lg px-3 py-2 text-sm bg-background outline-none appearance-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="all">All Platforms</option>
               <option value="tiktok">TikTok</option>
@@ -341,7 +341,7 @@ export default function CategoryDetailPage({
             <select
               value={filterEngage}
               onChange={(e) => setFilterEngage(e.target.value as any)}
-              className="border rounded-lg px-3 py-2 text-sm bg-background"
+              className="border rounded-lg px-3 py-2 text-sm bg-background outline-none appearance-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>

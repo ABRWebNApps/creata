@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints } from "../utils";
+import { suggestPainPoints, isHighValueLead } from "../utils";
 
 type InstagramCreator = {
   handle: string;
@@ -130,7 +130,10 @@ export async function POST(request: NextRequest) {
 
           const score = calcScore(followerCount, engagementRate, email !== null, profile.is_business_account || false, profile.category_name || null);
 
-          allCreators.push({
+                    // Single-pass relevance + profile-type + pain-point filter
+                    if (!isHighValueLead(profile.biography || null, null, keywords)) continue;
+
+                    allCreators.push({
                       handle: profile.username,
                       nickname: profile.full_name || profile.username,
                       platform: "instagram",

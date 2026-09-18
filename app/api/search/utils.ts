@@ -1,4 +1,60 @@
-// Shared utility functions for lead scraping
+// ── Filtering: exclude gov/media/news, verify relevance, check pain-point signal ──
+
+// Keywords that signal a non-person/business account irrelevant for lead gen
+const EXCLUDED_PROFILE_INDICATORS = [
+  /government|govt|official/i,
+  /news|breaking|headlines|newsletter|journalism/i,
+  /media|tv|radio|broadcast|channel|network/i,
+  /ministry|department|agency|administration|authority/i,
+  /nonprofit|foundation|\.org/i,
+];
+
+const PAIN_POINT_KEYWORDS = [
+  "need", "struggl", "pain", "problem", "challeng", "difficult", "hard", "can't",
+  "help", "grow", "scale", "grow", "improve", "fix", "solve", "issue",
+  "searching for", "looking for", "finding", "stuck", "confus",
+  "want to", "trying to", "how do i", "how to", "anyone know",
+  "recommend", "advice", "tip", "suggest", "hack",
+  "budget", "afford", "expensive", "cost", "pricing",
+  "traffic", "engagement", "followers", "reach", "conversion", "sales",
+  "lead", "client", "customer", "revenue", "monetize", "income",
+];
+
+// Single-pass filter: checks profile type → relevance → pain-point signal
+// Returns true if the lead should be INCLUDE, false if it should be EXCLUDED
+export function isHighValueLead(
+  bio: string | null,
+  matchedContent: string | null,
+  keywords: string[],
+): boolean {
+  const textToCheck = [bio || "", matchedContent || ""].filter(Boolean).join(" ");
+
+  // Stage 1: Exclude government/media/news profiles by bio
+  if (bio) {
+    for (const pattern of EXCLUDED_PROFILE_INDICATORS) {
+      if (pattern.test(bio)) return false;
+    }
+  }
+
+  // Stage 2: Keyword relevance — matched content must contain at least one keyword
+  if (matchedContent) {
+    const hasKeyword = keywords.some((kw) => {
+      const fragments = kw.toLowerCase().split(/\s+/);
+      return fragments.some((frag) => matchedContent!.toLowerCase().includes(frag));
+    });
+    if (!hasKeyword) return false;
+  }
+
+  // Stage 3: Pain-point signal — bio or matched content shows genuine need/struggle
+  if (textToCheck) {
+    const hasPainSignal = PAIN_POINT_KEYWORDS.some((kw) =>
+      textToCheck.toLowerCase().includes(kw.toLowerCase())
+    );
+    if (!hasPainSignal) return false;
+  }
+
+  return true;
+}
 
 export function suggestPainPoints(bio: string | null): string[] {
   if (!bio) return [
