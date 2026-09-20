@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { expandQueryTerms } from "../../search/utils";
 
 // Fallback keyword generation when AI fails (no API cost)
 const FALLBACK_KEYWORDS: Record<string, string[]> = {
-  fitness: ["fitness", "gym", "workout", "fitfam", "exercise", "health", "bodybuilding", "personaltrainer"],
+  healthcare: ["healthcare", "medical", "doctor", "nurse", "patient", "clinical", "hospital", "healthcareprofessional"],
+  medical: ["medical", "healthcare", "clinical", "pharmaceutical", "diagnosis", "treatment", "medtech", "healthcareprovider"],
+  health: ["health", "wellness", "nutrition", "mentalhealth", "healthtips", "healthylifestyle", "selfcare", "healthcoach"],
+  fitness: ["fitness", "gym", "workout", "fitfam", "exercise", "bodybuilding", "personaltrainer", "fitnesstips"],
   crypto: ["crypto", "bitcoin", "blockchain", "defi", "web3", "nft", "trading", "investment"],
   business: ["business", "entrepreneur", "startup", "marketing", "sales", "growth", "hustle", "success"],
   tech: ["tech", "programming", "developer", "coding", "software", "ai", "machinelearning", "startup"],
@@ -18,12 +22,33 @@ const FALLBACK_KEYWORDS: Record<string, string[]> = {
 
 function generateFallbackKeywords(query: string): { niche: string; keywords: string[] } {
   const q = query.toLowerCase().trim();
-  // Try to match a known niche
+
+  // Priority 1: best key-match — query contains a niche key. Pick longest match for specificity.
+  const keyMatches: { niche: string; keywords: string[]; score: number }[] = [];
   for (const [niche, words] of Object.entries(FALLBACK_KEYWORDS)) {
-    if (q.includes(niche) || words.some(w => q.includes(w))) {
-      return { niche, keywords: words.slice(0, 4) };
+    if (q.includes(niche)) {
+      keyMatches.push({ niche, keywords: words, score: niche.length });
     }
   }
+  if (keyMatches.length > 0) {
+    keyMatches.sort((a, b) => b.score - a.score); // longest key match wins
+    return { niche: keyMatches[0].niche, keywords: keyMatches[0].keywords.slice(0, 4) };
+  }
+
+  // Priority 2: value-match — a keyword value appears in the query. Pick the most specific (longest matching word).
+  const valueMatches: { niche: string; keywords: string[]; matchedWord: string }[] = [];
+  for (const [niche, words] of Object.entries(FALLBACK_KEYWORDS)) {
+    for (const w of words) {
+      if (q.includes(w)) {
+        valueMatches.push({ niche, keywords: words, matchedWord: w });
+      }
+    }
+  }
+  if (valueMatches.length > 0) {
+    valueMatches.sort((a, b) => b.matchedWord.length - a.matchedWord.length); // longest matched value wins
+    return { niche: valueMatches[0].niche, keywords: valueMatches[0].keywords.slice(0, 4) };
+  }
+
   // Generic fallback: extract meaningful words from query
   const stopWords = new Set(["find", "get", "me", "for", "the", "a", "an", "i", "in", "of", "to", "is", "on", "and", "or", "with", "by", "from", "at", "are", "that", "this", "how", "what", "why", "when", "where", "who", "influencer", "creator", "leads", "people", "search"]);
   const words = q.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
@@ -68,57 +93,73 @@ export async function POST(request: NextRequest) {
     let aiUsed = false;
 
     try {
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://creata.app",
-            "X-Title": "Creata",
-          },
-          body: JSON.stringify({
-            model: "poolside/laguna-xs-2.1:free",
-            max_tokens: 300,
-            temperature: 0.3,
-            messages: [
-              {
-                role: "system",
-                content: `Generate 4 search keywords for ${platform}. Query: "${query}". Target: ${tier}.
-Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"]}`,
-              },
-              {
-                role: "user",
-                content: query,
-              },
-            ],
-          }),
-        }
-      );
+          // For Tab B (Search by Intent), we need BROADER terms — not just categorical keywords
+          const isIntentMode = searchMode === "painpoints";
+          const prompt = isIntentMode
+            ? `Generate 6-8 search keywords for ${platform} related to the pain point / intent: "${query}". Target: ${tier}.
+    These will be used to find people discussing related problems or seeking advice.
+    Include: problem-framing terms, related topics, common questions, solution-seeking phrases.
+    Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4","kw5","kw6"]}`
+            : `Generate 4 search keywords for ${platform}. Query: "${query}". Target: ${tier}.
+    Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"]}`;
 
-      if (response.ok) {
-        const data = await response.json();
-        const aiText = data.choices?.[0]?.message?.content || "";
-        const result = extractJson(aiText);
-        if (result && Array.isArray(result.keywords) && result.keywords.length > 0) {
-          niche = result.niche || query;
-          keywords = result.keywords.slice(0, 4);
-          aiUsed = true;
-          console.log(`✅ AI keywords: ${keywords.join(", ")}`);
-        }
-      }
-    } catch (aiErr) {
-      console.error("AI keyword gen failed, using fallback:", aiErr);
-    }
+          const response = await fetch(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "HTTP-Referer": "https://creata.app",
+                "X-Title": "Creata",
+              },
+              body: JSON.stringify({
+                model: "poolside/laguna-xs-2.1:free",
+                max_tokens: 300,
+                temperature: 0.3,
+                messages: [
+                  {
+                    role: "system",
+                    content: prompt,
+                  },
+                  {
+                    role: "user",
+                    content: query,
+                  },
+                ],
+              }),
+            }
+          );
 
-    // Fallback if AI didn't produce valid keywords
-    if (keywords.length === 0) {
-      const fallback = generateFallbackKeywords(query);
-      niche = fallback.niche;
-      keywords = fallback.keywords;
-      console.log(`⚡ Fallback keywords: ${keywords.join(", ")}`);
-    }
+          if (response.ok) {
+            const data = await response.json();
+            const aiText = data.choices?.[0]?.message?.content || "";
+            const result = extractJson(aiText);
+            if (result && Array.isArray(result.keywords) && result.keywords.length > 0) {
+              niche = result.niche || query;
+              keywords = result.keywords.slice(0, isIntentMode ? 8 : 4);
+              aiUsed = true;
+              console.log(`✅ AI keywords (${isIntentMode ? "intent" : "leads"}): ${keywords.join(", ")}`);
+            }
+          }
+        } catch (aiErr) {
+          console.error("AI keyword gen failed, using fallback:", aiErr);
+        }
+
+        // Fallback if AI didn't produce valid keywords
+        if (keywords.length === 0) {
+          if (searchMode === "painpoints") {
+            // Tab B: expand query into multiple related intent-focused terms
+            keywords = expandQueryTerms(query, tier);
+            niche = query;
+            console.log(`⚡ Expanded intent terms for Tab B: ${keywords.join(", ")}`);
+          } else {
+            const fallback = generateFallbackKeywords(query);
+            niche = fallback.niche;
+            keywords = fallback.keywords;
+            console.log(`⚡ Fallback keywords: ${keywords.join(", ")}`);
+          }
+        }
 
     return NextResponse.json({
       success: true,

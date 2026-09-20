@@ -207,7 +207,7 @@ export default function Home() {
                 }`}
               >
                 <MessageCircle className="w-4 h-4" />
-                Search by Pain Points
+                Search by Intent
               </button>
             </div>
 

@@ -1,4 +1,76 @@
 // ── Filtering: exclude gov/media/news, verify relevance, check pain-point signal ──
+// ── Query expansion for Tab B (Search by Intent) ──
+
+/**
+ * expandQueryTerms — expands a raw user query into multiple related search terms
+ * for Tab B (pain-point/intent search). Uses pattern-based expansion, not LLM calls.
+ * Tab A (leads) should NOT use this — it stays literal/categorical.
+ *
+ * Strategy: expand by generating variant forms of the query:
+ * - Problem variants: "[topic] problem", "[topic] help", etc.
+ * - Related/intent terms based on common patterns
+ * - Gravity: rankings-based synonym expansion for well-known topics
+ */
+const GRAVITY_TERMS: Record<string, string[]> = {
+  menopause: ["menopause symptoms", "hot flashes", "perimenopause", "menopause relief", "menopause treatment", "menopause weight gain", "menopause anxiety", "hormone therapy menopause"],
+  "forex trading": ["forex for beginners", "forex tips", "forex strategy", "how to trade forex", "forex signals", "forex broker", "forex education", "currency trading"],
+  "digital marketing": ["digital marketing strategy", "social media marketing", "content marketing", "SEO tips", "marketing automation", "lead generation", "email marketing", "Facebook ads"],
+  fitness: ["weight loss tips", "workout routine", "fitness motivation", "muscle building", "fat loss", "home workout", "fitness coach", "nutrition plan"],
+  crypto: ["cryptocurrency investment", "Bitcoin trading", "DeFi projects", "NFT tips", "Web3", "crypto wallet", "blockchain technology", "altcoin"],
+  startup: ["startup funding", "growth hacking", "product market fit", "startup tips", "VC funding", "bootstrapping", "SaaS growth", "entrepreneur advice"],
+  realestate: ["real estate investing", "property investment", "house flipping", "real estate agent", "rental property", "mortgage tips", "real estate market", "home buying"],
+  health: ["health tips", "mental health", "wellness routine", "healthy lifestyle", "nutrition advice", "immune support", "health coaching", "natural remedies"],
+  healthcare: ["healthcare jobs", "medical career", "nursing tips", "patient care", "clinical research", "medical advice", "healthcare professional", "doctor recommendations"],
+  medical: ["medical advice", "treatment options", "symptoms help", "diagnosis help", "medical research", "healthcare tips", "patient support", "clinical trials"],
+};
+
+export function expandQueryTerms(query: string, tier: string): string[] {
+  const q = query.toLowerCase().trim();
+
+  // Step 1: Check gravity table for well-known topics
+  for (const [topic, expansions] of Object.entries(GRAVITY_TERMS)) {
+    if (q.includes(topic)) {
+      const locationTail = tier && tier !== "Global" ? ` ${tier}` : "";
+      return Array.from(new Set(expansions.map(t => t + locationTail))).slice(0, 8);
+    }
+  }
+
+  // Step 2: Clean the query — strip intent prefixes for cleaner expansion
+  const intentPrefixes = /^(how (do |can |to )|what (is |are |does )|where (can |do )|when (should |can )|why (is |do ))(i |you |one |we |they )?/i;
+  const cleanQuery = q.replace(intentPrefixes, '').trim() || q;
+
+  const expanded: string[] = [q]; // always include raw query
+  const coreTerm = cleanQuery.length > 2 ? cleanQuery : q;
+
+  if (coreTerm.length > 3) {
+    // Problem-framing variants
+    expanded.push(`${coreTerm} problem`, `${coreTerm} help`, `${coreTerm} advice`, `${coreTerm} tips`, `${coreTerm} solution`);
+    // Intent-seeking variants
+    expanded.push(`how to ${coreTerm}`, `learn ${coreTerm}`, `${coreTerm} guide`);
+    // Community/discussion variants
+    expanded.push(`${coreTerm} review`, `${coreTerm} recommendation`, `${coreTerm} experience`);
+  }
+
+  // Step 3: Extract significant words from the core term and add shortened variants
+  const stopWords = new Set(["how", "to", "do", "i", "a", "an", "the", "in", "of", "for", "and", "with", "my", "get", "me", "start", "find", "make", "need", "want", "what", "is", "are", "was", "can", "does", "have", "has", "its", "it", "on", "be", "or", "but", "not"]);
+  const words = coreTerm.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+  if (words.length >= 2) {
+    expanded.push(words.join(" "));                       // "digital marketing" → "digital marketing"
+    if (words.length >= 3) {
+      expanded.push(words.slice(0, 2).join(" "));         // "how to start trading" → "start trading"
+    }
+  }
+
+  // Step 4: Pain-point signal suffix variants
+  if (!expanded.some(t => t.includes("struggl") || t.includes("help"))) {
+    expanded.push(`${coreTerm} struggling`, `${coreTerm} stuck`, `${coreTerm} need help`);
+  }
+
+  // Dedupe and limit
+  const unique = Array.from(new Set(expanded.map(t => t.toLowerCase().trim())));
+  const locationTail = tier && tier !== "Global" ? ` ${tier}` : "";
+  return unique.slice(0, 10).map(t => t + locationTail);
+}
 
 // Keywords that signal a non-person/business account irrelevant for lead gen
 const EXCLUDED_PROFILE_INDICATORS = [

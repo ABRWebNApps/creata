@@ -75,45 +75,46 @@ export async function POST(request: NextRequest) {
     const seenHandles = new Set<string>();
     const pendingProfiles: { username: string; matched_comment: string | null; basicInfo: any }[] = [];
 
-    // PHASE 1: Search Threads by keyword (1 credit per keyword)
-    for (const keyword of keywords) {
-      try {
-        const searchUrl = `https://api.scrapecreators.com/v1/threads/search?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&count=60`;
-        const searchResponse = await fetchWithRetry(searchUrl, {
-          headers: {
-            "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
-          },
-        });
+    // PHASE 1: Search Threads by keyword to discover social media creators (1 credit per keyword)
+        for (const keyword of keywords) {
+          try {
+            const searchUrl = `https://api.scrapecreators.com/v1/threads/search?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&count=60`;
+            const searchResponse = await fetchWithRetry(searchUrl, {
+              headers: {
+                "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
+              },
+            });
 
-        if (!searchResponse.ok) {
-          const errText = await searchResponse.text().catch(() => '');
-          console.error(`X search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
-          continue;
+            if (!searchResponse.ok) {
+              const errText = await searchResponse.text().catch(() => '');
+              console.error(`X search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
+              continue;
+            }
+
+            const searchData = await searchResponse.json();
+            const posts = searchData.posts || [];
+
+            for (const post of posts) {
+              const user = post.user;
+              if (!user?.username || seenHandles.has(user.username)) continue;
+
+              seenHandles.add(user.username);
+              pendingProfiles.push({
+                username: user.username,
+                matched_comment: post.caption?.text || null,
+                threadsProfileUrl: `https://www.threads.net/@${user.username}`,
+                basicInfo: {
+                  ...user,
+                  like_count: post.like_count || 0,
+                  reshare_count: post.reshare_count || 0,
+                  caption: post.caption?.text || "",
+                },
+              });
+            }
+          } catch (err) {
+            console.error(`Error searching X keyword "${keyword}":`, err);
+          }
         }
-
-        const searchData = await searchResponse.json();
-        const posts = searchData.posts || [];
-
-        for (const post of posts) {
-          const user = post.user;
-          if (!user?.username || seenHandles.has(user.username)) continue;
-
-          seenHandles.add(user.username);
-          pendingProfiles.push({
-            username: user.username,
-            matched_comment: post.caption?.text || null,
-            basicInfo: {
-              ...user,
-              like_count: post.like_count || 0,
-              reshare_count: post.reshare_count || 0,
-              caption: post.caption?.text || "",
-            },
-          });
-        }
-      } catch (err) {
-        console.error(`Error searching X keyword "${keyword}":`, err);
-      }
-    }
 
     // PHASE 2: Fetch X/Twitter profiles for detail — up to 15 profile fetches
     const maxProfileFetches = searchMode === "painpoints" ? 10 : 15;
@@ -136,8 +137,44 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    for (const result of profileResults) {
-      if (result.status === "rejected") continue;
+    for (let i = 0; i < profileResults.length; i++) {
+      const result = profileResults[i];
+      const pendingInfo = pendingProfiles[i] || null;
+
+      if (result.status === "rejected" || !result.value?.profileData?.username) {
+        // X/Twitter profile not found for this handle — fall back to Threads data
+        if (!pendingInfo) continue;
+        const tc = pendingInfo.basicInfo || {};
+        const followerCount = 0; // Threads doesn't expose follower count
+        const estEngagement = followerCount > 0 ? parseFloat((Math.random() * 3 + 1).toFixed(2)) : 1.0;
+        const threadScore = calcScore(followerCount, estEngagement, false);
+
+        // Apply follower filter (skip if minFollowers > 0 since we have 0)
+        if (minFollowers !== undefined && minFollowers !== null && minFollowers > 0) continue;
+
+        creators.push({
+          handle: pendingInfo.username,
+          nickname: tc.full_name || pendingInfo.username,
+          platform: "x",
+          profile_url: pendingInfo.threadsProfileUrl || `https://x.com/${pendingInfo.username}`,
+          avatar: tc.profile_pic_url || (tc.hd_profile_pic_versions?.length > 0 ? tc.hd_profile_pic_versions[0].url : null) || null,
+          bio: pendingInfo.matched_comment || null,
+          bioLink: null,
+          verified: tc.is_verified || false,
+          followers: 0,
+          following: 0,
+          total_likes: tc.like_count || 0,
+          video_count: 0,
+          posts_count: 0,
+          engagement_rate: estEngagement,
+          email: null,
+          score: threadScore,
+          pain_points: suggestPainPoints(pendingInfo.matched_comment || null),
+          matched_comment: pendingInfo.matched_comment || null,
+          matched_caption: null,
+        });
+        continue;
+      }
 
       const { username, profileData } = result.value;
       if (!profileData.username) continue;
@@ -207,7 +244,7 @@ export async function POST(request: NextRequest) {
         handle: entry.username,
         nickname: entry.basicInfo.full_name || entry.username,
         platform: "x",
-        profile_url: `https://x.com/${entry.username}`,
+        profile_url: entry.threadsProfileUrl || `https://x.com/${entry.username}`,
         avatar: entry.basicInfo.profile_pic_url || null,
         bio: entry.basicInfo.caption || null,
         bioLink: null,

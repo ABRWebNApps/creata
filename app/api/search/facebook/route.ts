@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints } from "../utils";
+import { suggestPainPoints, isHighValueLead } from "../utils";
 
 type FacebookCreator = {
   handle: string;
@@ -73,64 +73,79 @@ export async function POST(request: NextRequest) {
     }
 
     const creators: FacebookCreator[] = [];
-    const seenHandles = new Set<string>();
+    const seenPageIds = new Set<string>();
 
-    // Phase 1: Search users by keyword
+    // Phase 1: Search Facebook Ad Library for business pages running ads
+    // Uses v1/facebook/adLibrary/search/ads which returns real business pages
     for (const keyword of keywords) {
       if (creators.length >= MAX_SEARCH_USERS) break;
 
       try {
         const res = await fetch(
-          `https://api.scrapecreators.com/v1/facebook/search/users?query=${encodeURIComponent(keyword)}&limit=50`,
+          `https://api.scrapecreators.com/v1/facebook/adLibrary/search/ads?query=${encodeURIComponent(keyword)}&country=ALL&status=ALL`,
           { headers: { "x-api-key": API_KEY }, signal: AbortSignal.timeout(15000) }
         );
         if (!res.ok) continue;
         const data = await res.json();
-        if (!data.success || !Array.isArray(data.data)) continue;
+        const searchResults = data.searchResults || data.data?.searchResults || [];
+        if (!Array.isArray(searchResults) || searchResults.length === 0) continue;
 
-        for (const user of data.data) {
-          const handle = user.username || user.id || "";
-          if (!handle || seenHandles.has(handle)) continue;
-          seenHandles.add(handle);
+        for (const ad of searchResults) {
+          const pageId = ad.page_id || "";
+          if (!pageId || seenPageIds.has(pageId)) continue;
+          seenPageIds.add(pageId);
 
-          // Build creator from search data (minimal)
-          const followerCount = user.followers_count || user.fan_count || 0;
-          if (followerCount < MIN_FOLLOWERS) continue;
-          if (minFollowers && followerCount < minFollowers) continue;
-          if (maxFollowers && followerCount > maxFollowers) continue;
+          const pageName = ad.page_name || pageId;
+          const snapshot = ad.snapshot || {};
+          const bodyText = snapshot.body?.text || "";
+          const avatarUrl = snapshot.page_profile_picture_url || null;
+          const linkUrl = snapshot.link_url || null;
+          const ctaText = snapshot.cta_text || null;
+          // Use the actual page profile URI (contains the vanity handle, not numeric ID)
+          const profileUri = snapshot.page_profile_uri || "";
+          // Extract handle from profile URI, fallback to page_id
+          const handle = profileUri ? profileUri.replace(/https?:\/\/[^\/]+\//, '').replace(/\/$/, '') : pageId;
+          const pageLikes = snapshot.page_like_count || 0;
+          const pageCategories = snapshot.page_categories || null;
 
-          creators.push({
-            handle,
-            nickname: user.name || user.full_name || handle,
+          // Build creator from Ad Library page data
+          const creator: FacebookCreator = {
+            handle: handle,
+            nickname: pageName,
             platform: "facebook",
-            profile_url: `https://facebook.com/${handle}`,
-            avatar: user.profile_picture || user.profile_pic_url || null,
-            bio: user.about || user.biography || null,
-            bioLink: null,
-            verified: user.is_verified || false,
-            followers: followerCount,
-            friends_count: user.friends_count || 0,
-            engagement_rate: user.engagement_rate || 0,
+            profile_url: profileUri || `https://facebook.com/${pageId}`,
+            avatar: avatarUrl,
+            bio: bodyText || null,
+            bioLink: linkUrl,
+            verified: false,
+            followers: pageLikes,
+            friends_count: 0,
+            engagement_rate: 0,
             email: null,
-            website: null,
-            location: user.location || null,
-            category: user.category || null,
+            website: linkUrl,
+            location: null,
+            category: Array.isArray(pageCategories) ? pageCategories[0] : (typeof pageCategories === 'string' ? pageCategories : null),
             profile_fetched: false,
             score: 0,
-            pain_points: suggestPainPoints(user.bio || user.about || null),
-            matched_comment: null,
-            matched_caption: null,
-          });
+            pain_points: suggestPainPoints(bodyText || null),
+            matched_caption: ctaText || null,
+          };
+
+          // Filter: pass snapshot body text as bio + cta text as matchedContent
+          if (!isHighValueLead(creator.bio, creator.matched_caption || null, keywords)) continue;
+          creators.push(creator);
         }
       } catch (err) {
-        console.error(`Facebook keyword search error for "${keyword}":`, err);
+        console.error(`Facebook Ad Library search error for "${keyword}":`, err);
       }
     }
 
     // Phase 2: Deep-fetch best leads' profiles (up to MAX_PROFILE_FETCHES)
+    // Profile fetch enriches with followers, category, email, etc.
     const toFetch = creators.slice(0, MAX_PROFILE_FETCHES);
     await Promise.allSettled(
       toFetch.map(async (lead) => {
+        if (!isHighValueLead(lead.bio || null, lead.matched_caption || null, keywords)) return;
         try {
           const res = await fetch(
             `https://api.scrapecreators.com/v1/facebook/profile?url=${encodeURIComponent(lead.profile_url)}`,
@@ -143,7 +158,7 @@ export async function POST(request: NextRequest) {
           const p = data.data;
           lead.avatar = p.profile_picture || p.picture_url || lead.avatar;
           lead.bio = p.about || p.description || lead.bio;
-          lead.bioLink = p.website || p.external_url || null;
+          lead.bioLink = p.website || p.external_url || lead.bioLink;
           lead.location = p.location || p.hometown || lead.location;
           lead.category = p.category || p.page_type || lead.category;
           lead.email = p.email || null;

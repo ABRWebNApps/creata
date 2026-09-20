@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
           searchMode,
           minFollowers,
           maxFollowers,
-          tier, // <-- pass tier to search routes for location-aware filtering
+          tier,
         }),
       }
     );
@@ -62,15 +62,15 @@ export async function POST(request: NextRequest) {
     const searchData = await searchResponse.json();
     console.log(`✅ Found ${searchData.total_found} ${platform} creators`);
 
-        // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
-        const cappedCreators = maxLeads && searchData.creators?.length > maxLeads
-          ? searchData.creators.slice(0, maxLeads)
-          : searchData.creators;
+    // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
+    const cappedCreators = maxLeads && searchData.creators?.length > maxLeads
+      ? searchData.creators.slice(0, maxLeads)
+      : searchData.creators;
 
-        return NextResponse.json({
-          success: true,
-          total_found: cappedCreators.length,
-          creators: cappedCreators,
+    return NextResponse.json({
+      success: true,
+      total_found: cappedCreators.length,
+      creators: cappedCreators,
       platform: platform,
       keywords: keywordData.keywords,
       niche: keywordData.niche,

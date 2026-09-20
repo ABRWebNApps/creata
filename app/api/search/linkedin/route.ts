@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { suggestPainPoints, isHighValueLead } from '../utils';
 
 type LinkedInCreator = {
   handle: string;
@@ -63,67 +64,6 @@ function calcScore(followers: number, hasEmail: boolean, hasAbout: boolean): num
   if (hasAbout) score += 15;
 
   return score;
-}
-
-// Generate pain point suggestions from bio/about text
-function suggestPainPoints(bio: string | null, headline: string | null): string[] {
-  const text = `${headline || ""} ${bio || ""}`.toLowerCase();
-  const painPoints: string[] = [];
-
-  // Industry-specific pain point patterns
-  if (text.includes("market") || text.includes("brand") || text.includes("growth")) {
-    painPoints.push("Struggling to scale their reach or engagement");
-    painPoints.push("Need better brand positioning in a crowded market");
-  }
-  if (text.includes("financ") || text.includes("invest") || text.includes("wealth") || text.includes("money")) {
-    painPoints.push("Uncertain about investment strategies in current economy");
-    painPoints.push("Looking for passive income or wealth preservation");
-  }
-  if (text.includes("tech") || text.includes("startup") || text.includes("founder") || text.includes("saas")) {
-    painPoints.push("Difficulty with customer acquisition and retention");
-    painPoints.push("Balancing product development with go-to-market strategy");
-  }
-  if (text.includes("health") || text.includes("wellness") || text.includes("fitness") || text.includes("mental")) {
-    painPoints.push("Overwhelmed by conflicting health/wellness advice online");
-    painPoints.push("Struggling to build consistent healthy habits");
-  }
-  if (text.includes("career") || text.includes("job") || text.includes("recruit") || text.includes("hire")) {
-    painPoints.push("Frustrated with traditional job search or hiring processes");
-    painPoints.push("Need better career growth or talent acquisition strategies");
-  }
-  if (text.includes("content") || text.includes("social") || text.includes("influencer")) {
-    painPoints.push("Content fatigue — difficulty standing out in their niche");
-    painPoints.push("Monetization challenges despite audience growth");
-  }
-  if (text.includes("real estate") || text.includes("property") || text.includes("housing")) {
-    painPoints.push("Navigating market volatility and interest rate uncertainty");
-    painPoints.push("Finding qualified leads in a shifting market");
-  }
-  if (text.includes("coach") || text.includes("consult") || text.includes("trainer")) {
-    painPoints.push("Difficulty converting followers into paying clients");
-    painPoints.push("Need scalable systems for client acquisition");
-  }
-  if (text.includes("design") || text.includes("creative") || text.includes("artist") || text.includes("photo")) {
-    painPoints.push("Undervalued work — struggling to charge premium rates");
-    painPoints.push("Finding consistent high-quality clients");
-  }
-  if (text.includes("lawyer") || text.includes("legal") || text.includes("attorney")) {
-    painPoints.push("Client acquisition costs too high in competitive practice areas");
-    painPoints.push("Need to differentiate their firm in a saturated market");
-  }
-  if (text.includes("sal") || text.includes("revenue") || text.includes("business development")) {
-    painPoints.push("Hit revenue plateau — need new channels or strategies");
-    painPoints.push("Long sales cycles draining pipeline efficiency");
-  }
-
-  // Generic — add if we have less than 3
-  if (painPoints.length < 3) {
-    if (bio) painPoints.push("Audience growth has plateaued and needs fresh strategies");
-    painPoints.push("Time management — too busy for content creation");
-  }
-
-  // De-duplicate and return top 3
-  return Array.from(new Set(painPoints)).slice(0, 3);
 }
 
 export async function POST(request: NextRequest) {
@@ -238,7 +178,8 @@ export async function POST(request: NextRequest) {
             : 1.0;
 
           const score = calcScore(followerCount, email !== null, !!profileData.about);
-          const painPoints = suggestPainPoints(profileData.about, null);
+          const painPoints = suggestPainPoints(profileData.about);
+          if (!isHighValueLead(profileData.about || null, entry.matched_comment || null, keywords)) continue;
 
           creators.push({
             handle: entry.handle,
@@ -273,7 +214,8 @@ export async function POST(request: NextRequest) {
             : parseFloat((4.0 + (Math.random() * 2 - 1)).toFixed(2));
 
           const score = calcScore(followerCount, false, false);
-          const painPoints = suggestPainPoints(entry.post_description, null);
+          const painPoints = suggestPainPoints(entry.post_description);
+          if (!isHighValueLead(entry.post_description || null, entry.matched_comment || null, keywords)) continue;
 
           creators.push({
             handle: entry.handle,
@@ -314,7 +256,8 @@ export async function POST(request: NextRequest) {
         : parseFloat((4.0 + (Math.random() * 2 - 1)).toFixed(2));
 
       const score = calcScore(followerCount, false, false);
-      const painPoints = suggestPainPoints(entry.post_description, null);
+      const painPoints = suggestPainPoints(entry.post_description);
+      if (!isHighValueLead(entry.post_description || null, entry.matched_comment || null, keywords)) continue;
 
       creators.push({
         handle: entry.handle,

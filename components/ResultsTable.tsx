@@ -445,7 +445,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                               <div className="flex-1 bg-muted rounded-lg py-2 px-3">
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Followers</p>
                   <p className="font-semibold text-sm">
-                    {(creator.followers || 0).toLocaleString()}
+                    {(creator.followers && creator.followers > 0 ? creator.followers.toLocaleString() : "-")}
                   </p>
                 </div>
                 <div className="flex-1 bg-muted rounded-lg py-2 px-3">
@@ -566,7 +566,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                           )}
                                         </td>
                                         <td className="px-6 py-4 font-medium">
-                                          {(creator.followers || 0).toLocaleString()}
+                                          {(creator.followers && creator.followers > 0 ? creator.followers.toLocaleString() : "-")}
                                         </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
