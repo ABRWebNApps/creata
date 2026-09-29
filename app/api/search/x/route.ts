@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const creators: XCreator[] = [];
     const seenHandles = new Set<string>();
-    const pendingProfiles: { username: string; matched_comment: string | null; basicInfo: any }[] = [];
+    const pendingProfiles: { username: string; matched_comment: string | null; basicInfo: any; threadsProfileUrl?: string | null }[] = [];
 
     // PHASE 1: Search Threads by keyword to discover social media creators (1 credit per keyword)
         for (const keyword of keywords) {

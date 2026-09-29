@@ -17,7 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // Server-side admin client (bypasses RLS — use only in route handlers)
 export const supabaseAdmin = createClient(
   supabaseUrl,
-  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
   {
     auth: {
       persistSession: false,

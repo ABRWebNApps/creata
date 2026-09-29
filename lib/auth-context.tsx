@@ -41,11 +41,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const recordSignupGeo = async (accessToken?: string) => {
+    if (!accessToken) return;
+    void fetch("/api/account/geo", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => undefined);
+  };
+
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: { data: { geo_source: "server" } },
     });
+    if (!error) await recordSignupGeo(data.session?.access_token);
     return { error };
   };
 
