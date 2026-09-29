@@ -9,7 +9,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: any; hasSession: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 };
@@ -56,10 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { geo_source: "server" } },
+      options: {
+        data: { geo_source: "server" },
+        emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=%2Fonboarding`,
+      },
     });
     if (!error) await recordSignupGeo(data.session?.access_token);
-    return { error };
+    return { error, hasSession: Boolean(data.session) };
   };
 
   const signIn = async (email: string, password: string) => {

@@ -1,7 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions | Creata",
+  description: "Draft Terms and Conditions for Creata, pending legal review.",
+};
 
 export default function TermsPage() {
-  return <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800"><p className="mb-4 inline-block rounded bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Draft for legal review</p><h1 className="mb-2 text-4xl font-bold">Terms of Service</h1><p className="mb-8 text-sm text-slate-500">Effective date: [EFFECTIVE DATE]</p>
+  return <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800"><p className="mb-4 inline-block rounded bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Draft for legal review</p><h1 className="mb-2 text-4xl font-bold">Terms and Conditions</h1><p className="mb-8 text-sm text-slate-500">Effective date: [EFFECTIVE DATE]</p>
     <p>These draft terms describe proposed rules for using Creata. They are not final and should not be treated as an accepted contract until reviewed and approved by the service owner and counsel. Replace [PLACEHOLDERS] before publication.</p>
     <h2 className="mt-8 text-xl font-semibold">The service</h2><p className="mt-3">Creata provides account-based search, lead organization, enrichment, and AI-assisted suggestions. Search results, public profile data, and generated analysis can be incomplete, delayed, or incorrect. You must verify information independently before relying on it.</p>
     <h2 className="mt-8 text-xl font-semibold">Your responsibilities</h2><p className="mt-3">Use Creata lawfully and respect third-party platform terms, privacy rights, and applicable marketing rules. Do not use the service to bypass access controls, collect data unlawfully, harass people, or send unwanted communications. You are responsible for the queries you submit and how you use results.</p>

@@ -35,7 +35,7 @@ export default function LandingFooter() {
             </a>
             <Link href="/cookie-policy" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Cookie Policy</Link>
             <Link href="/privacy-policy" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Privacy</Link>
-            <Link href="/terms" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Terms</Link>
+            <Link href="/terms" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Terms and Conditions</Link>
             <CookieSettingsButton />
           </nav>
         </div>

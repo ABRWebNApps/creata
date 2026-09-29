@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Sparkles, CheckCircle } from "lucide-react";
+import { Mail, Lock, Sparkles, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 export default function SignUpClientPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -32,12 +34,16 @@ export default function SignUpClientPage() {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password);
+    const { error, hasSession } = await signUp(email, password);
 
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
+      if (hasSession) {
+        router.replace("/onboarding");
+        return;
+      }
       setSuccess(true);
       setLoading(false);
     }
@@ -57,8 +63,7 @@ export default function SignUpClientPage() {
             We sent a confirmation link to <strong>{email}</strong>
           </p>
           <p className="text-sm text-gray-500 mb-6">
-            Click the link in the email to verify your account, then you can
-            sign in.
+            Confirm your email to continue to onboarding. If the confirmation link asks you to sign in, signing in will take you to onboarding automatically.
           </p>
           <Link
             href="/auth/signin"
@@ -124,13 +129,16 @@ export default function SignUpClientPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 characters"
                   required
-                  className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                  className="w-full pl-11 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
                 />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+                </button>
               </div>
             </div>
 
@@ -142,13 +150,16 @@ export default function SignUpClientPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
                   required
-                  className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                  className="w-full pl-11 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
                 />
+                <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} aria-label={showConfirmPassword ? "Hide confirmation password" : "Show confirmation password"} aria-pressed={showConfirmPassword} className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+                </button>
               </div>
             </div>
 
@@ -160,6 +171,11 @@ export default function SignUpClientPage() {
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
+            <p className="-mt-3 text-center text-sm text-gray-500">
+              Before creating an account, read our{" "}
+              <Link href="/terms" className="font-medium text-blue-700 underline underline-offset-2">Terms and Conditions</Link>{" "}
+              and <Link href="/privacy-policy" className="font-medium text-blue-700 underline underline-offset-2">Privacy Policy</Link>.
+            </p>
           </form>
 
           {/* Sign In Link */}

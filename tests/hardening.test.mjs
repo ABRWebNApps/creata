@@ -3,6 +3,15 @@ import assert from "node:assert/strict";
 import { getPublicClientIp, lookupSignupGeo } from "../lib/geo.ts";
 import { CONSENT_POLICY_VERSION, allowsOptionalScript, parseConsent } from "../lib/consent.ts";
 import { NEGATIVE_ADJACENCY, filterRelevantLeads, isHardRejected, parseJudgementJson, scoreJudgement, validateProblemAnalysis, validateQueryUnderstanding } from "../lib/lead-quality.ts";
+import { safeAuthRedirectPath } from "../lib/auth-redirect.ts";
+
+test("auth callback redirects stay on the app origin", () => {
+  assert.equal(safeAuthRedirectPath("/onboarding"), "/onboarding");
+  assert.equal(safeAuthRedirectPath(null), "/");
+  assert.equal(safeAuthRedirectPath("//evil.example"), "/");
+  assert.equal(safeAuthRedirectPath("https://evil.example"), "/");
+  assert.equal(safeAuthRedirectPath("/\\evil.example"), "/");
+});
 
 test("geo uses the default client IP headers and rejects private addresses", () => {
   const original = process.env.TRUSTED_PROXY_IPS;

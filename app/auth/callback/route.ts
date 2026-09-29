@@ -3,11 +3,13 @@ import { cookies } from "next/headers";
 import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getPublicClientIp, hashSignupIp, lookupSignupGeo } from "@/lib/geo";
+import { safeAuthRedirectPath } from "@/lib/auth-redirect";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const redirectPath = safeAuthRedirectPath(requestUrl.searchParams.get("redirect_to"));
 
   if (code) {
     const cookieStore = await cookies();
@@ -44,5 +46,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL("/", request.url));
+  return NextResponse.redirect(new URL(redirectPath, request.url));
 }

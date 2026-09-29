@@ -10,6 +10,7 @@ CREATA OWNER TEST PLAN — local hardening branch
 8. Verify auth/sign-in, search each platform, save/remove leads, category flows, pricing, Paystack verification, enrichment, and admin pages with authorized accounts.
 9. Inspect browser console and Network tab on landing, auth, dashboard/search, leads, pricing, settings, legal, onboarding, and admin routes. Record genuine errors in `docs/BUGLOG.md`; do not suppress console output.
 10. Run the labeled lead-quality evaluation: 10 queries × 20 real provider results each, with independent labels. Explicitly assert furniture has 0 realtors and 0 media accounts; report precision using accepted leads only. Current unit fixtures are synthetic and are not the requested live evaluation.
+11. Create an account and confirm the email: the callback should open onboarding. If email confirmation returns to sign-in, signing in should open onboarding unless its profile is complete. Complete one step, save and skip, then sign in again to verify resume; finish the profile and verify later sign-ins go to the app. Use the Show/Hide controls on both signup password fields and sign-in; check that Terms and Conditions and Privacy Policy links are visible before submitting signup.
 
 Local automated checks: `npx tsc --noEmit`, `npm test`, `npm run build`. Live Supabase, payment, search-provider, browser-console, and 200-result lead evaluation remain manual because they require an authenticated project and third-party data/credentials.
 
