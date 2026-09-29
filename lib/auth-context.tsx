@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (_event === "SIGNED_IN" && session?.user.user_metadata?.geo_source === "server") void recordSignupGeo(session.access_token);
     });
 
     return () => subscription.unsubscribe();
@@ -43,10 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const recordSignupGeo = async (accessToken?: string) => {
     if (!accessToken) return;
-    void fetch("/api/account/geo", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }).catch(() => undefined);
+    try {
+      const response = await fetch("/api/account/geo", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.currency === "NGN" || result.currency === "USD") window.dispatchEvent(new CustomEvent("creata:signup-currency", { detail: result.currency }));
+    } catch (error) { console.error("Signup currency could not be synchronized", error); }
   };
 
   const signUp = async (email: string, password: string) => {

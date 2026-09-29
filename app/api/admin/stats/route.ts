@@ -55,6 +55,25 @@ export async function GET(req: NextRequest) {
     supabaseAdmin.from('subscriptions').select('id').eq('status', 'active').eq('currency', 'NGN'),
   ]);
 
+  const { data: accountGeo } = await supabaseAdmin.from("user_plans").select("country_code,currency");
+  const { data: onboardingRows } = await supabaseAdmin.from("onboarding_profiles").select("industry,main_goal,target_regions");
+  const usersByCountry: Record<string, number> = {};
+  let currencyNgn = 0;
+  let currencyUsd = 0;
+  for (const account of accountGeo ?? []) {
+    if (account.country_code) usersByCountry[account.country_code] = (usersByCountry[account.country_code] ?? 0) + 1;
+    if (account.currency === "NGN") currencyNgn++;
+    if (account.currency === "USD") currencyUsd++;
+  }
+  const industries: Record<string, number> = {};
+  const goals: Record<string, number> = {};
+  const targetCountries: Record<string, number> = {};
+  for (const profile of onboardingRows ?? []) {
+    if (profile.industry) industries[profile.industry] = (industries[profile.industry] ?? 0) + 1;
+    if (profile.main_goal) goals[profile.main_goal] = (goals[profile.main_goal] ?? 0) + 1;
+    for (const region of profile.target_regions ?? []) targetCountries[region] = (targetCountries[region] ?? 0) + 1;
+  }
+
   // ── Real revenue calculation ─────────────────────────────
   let revenueUSD = 0;
   let revenueNGN = 0;
@@ -107,6 +126,9 @@ export async function GET(req: NextRequest) {
     ngn_subscriptions: (ngnSubs ?? []).length,
     daily_searches: dailySearches,
     plan_distribution: planCounts,
+    users_by_country: usersByCountry,
+    currency_split: { NGN: currencyNgn, USD: currencyUsd },
+    onboarding_breakdown: { industries, goals, target_regions: targetCountries },
     subscription_breakdown: subCounts,
     today_cost: todayCost,
     month_cost: monthCost,

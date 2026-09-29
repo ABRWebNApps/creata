@@ -36,6 +36,7 @@ export default function AccountPage() {
   const [subs, setSubs] = useState<SubscriptionRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [subsLoading, setSubsLoading] = useState(true);
+  const [subsError, setSubsError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
 
@@ -58,7 +59,7 @@ export default function AccountPage() {
         setSubs(d.subscriptions ?? []);
         setPayments(d.payments ?? []);
       })
-      .catch(() => {})
+      .catch((err: unknown) => setSubsError(err instanceof Error ? err.message : "Account billing history could not be loaded."))
       .finally(() => setSubsLoading(false));
   }, [user]);
 
@@ -117,9 +118,11 @@ export default function AccountPage() {
                 <p className="text-sm text-gray-500">Manage your account details</p>
               </div>
             </div>
+            {subsError && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{subsError}</p>}
             <div className="bg-gray-50 rounded-xl p-4 sm:p-5">
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Email</label>
               <p className="text-sm sm:text-base font-medium text-gray-900">{user?.email ?? "Not signed in"}</p>
+              <Link href="/onboarding" className="mt-3 inline-flex text-sm font-medium text-blue-600 hover:text-blue-700">Edit business profile</Link>
             </div>
           </section>
 

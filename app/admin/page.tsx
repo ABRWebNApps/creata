@@ -38,6 +38,9 @@ type AdminStats = {
   avg_cost_per_search: number;
   daily_searches: Record<string, number>;
   plan_distribution: Record<string, number>;
+  users_by_country?: Record<string, number>;
+  currency_split?: { NGN: number; USD: number };
+  onboarding_breakdown?: { industries: Record<string, number>; goals: Record<string, number>; target_regions: Record<string, number> };
   subscription_breakdown: Record<string, number>;
   recent_activity: {
     id: string;
@@ -253,6 +256,17 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                   </div>
+
+                  <section className="mb-8 rounded-2xl border border-gray-100 p-6">
+                    <h2 className="text-lg font-semibold">Customer profile overview</h2>
+                    <p className="mt-1 text-sm text-gray-500">Signup country and currency, plus optional onboarding answers.</p>
+                    <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                      <div><h3 className="text-sm font-semibold">Currency split</h3><p className="mt-2 text-sm">NGN: {stats.currency_split?.NGN ?? 0}</p><p className="text-sm">USD: {stats.currency_split?.USD ?? 0}</p></div>
+                      <div><h3 className="text-sm font-semibold">Signup countries</h3>{Object.entries(stats.users_by_country ?? {}).slice(0, 8).map(([name, count]) => <p key={name} className="text-sm">{name}: {count}</p>)}</div>
+                      <div><h3 className="text-sm font-semibold">Industries</h3>{Object.entries(stats.onboarding_breakdown?.industries ?? {}).slice(0, 8).map(([name, count]) => <p key={name} className="text-sm">{name}: {count}</p>)}</div>
+                      <div><h3 className="text-sm font-semibold">Goals / target regions</h3>{Object.entries(stats.onboarding_breakdown?.goals ?? {}).slice(0, 4).map(([name, count]) => <p key={name} className="text-sm">{name}: {count}</p>)}{Object.entries(stats.onboarding_breakdown?.target_regions ?? {}).slice(0, 4).map(([name, count]) => <p key={`region-${name}`} className="text-sm">{name}: {count} target</p>)}</div>
+                    </div>
+                  </section>
 
                   {/* Recent Activity Feed */}
                   <div className="rounded-2xl border border-gray-100 p-6 mb-8">

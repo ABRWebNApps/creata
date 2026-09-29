@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -15,16 +15,13 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 // Server-side admin client (bypasses RLS — use only in route handlers)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+export const supabaseAdmin: SupabaseClient = typeof window === "undefined"
+  ? createClient(
+      supabaseUrl,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    )
+  : (null as unknown as SupabaseClient);
 
 // Types for our database
 export type SavedLead = {

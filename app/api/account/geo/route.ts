@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: existing } = await supabaseAdmin.from("user_plans").select("country_code,currency").eq("user_id", user.id).maybeSingle();
-  if (existing?.country_code || existing?.currency) return NextResponse.json({ success: true, locked: true });
+  const { data: existing } = await supabaseAdmin.from("user_plans").select("country_code,currency,geo_source").eq("user_id", user.id).maybeSingle();
+  if (existing?.geo_source) return NextResponse.json({ success: true, locked: true, country_code: existing.country_code, currency: existing.currency });
 
   const ip = getPublicClientIp(request.headers);
   const geo = await lookupSignupGeo(ip);
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const ipHash = hashSignupIp(ip);
     if (ipHash) update.signup_ip_hash = ipHash;
   }
-  const { error: updateError } = await supabaseAdmin.from("user_plans").update(update).eq("user_id", user.id);
+  const { error: updateError } = await supabaseAdmin.from("user_plans").update(update).eq("user_id", user.id).is("geo_source", null);
   if (updateError) return NextResponse.json({ error: "Signup location could not be saved" }, { status: 503 });
   return NextResponse.json({ success: true, country_code: geo.countryCode, currency: geo.currency });
 }

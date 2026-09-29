@@ -1,11 +1,16 @@
 CREATA OWNER TEST PLAN — local hardening branch
 
-1. Apply supabase/migrations/06_account_geo_currency.sql in the Supabase SQL editor before testing signup geolocation.
-2. Set SUPABASE_SERVICE_ROLE_KEY server-side (never NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY). Optionally set SIGNUP_IP_HASH_SALT to a random private value; without it no IP hash is retained.
-3. Test new signup from a Nigerian public IP: user_plans should record NG + NGN; from US/GB public IP: country code + USD. Signup must still succeed if ipapi.co is unavailable (USD fallback). Existing rows must remain unchanged on a repeated call/VPN change.
-4. Confirm /api/account/geo returns 401 without a bearer access token; verify the page does not expose server-only keys in DevTools Sources/Network.
-5. Verify auth/sign-in, search each existing platform, save/remove leads, category flows, subscription/pricing, Paystack verification, enrichment, and admin pages with authorized accounts.
-6. Inspect browser console and Network tab on public landing, auth, dashboard/search, leads, pricing, settings, and admin routes. Log genuine errors in docs/BUGLOG.md; do not suppress console output.
-7. For lead quality, label at least 20 results each across furniture, solar installers, dentists, and other target queries. Report measured precision and realtor/media false positives; do not state a precision target passed until that evaluation is actually run.
+1. Compare the checked-in schema against the live Supabase schema using [schema snapshot](./schema-snapshot-before-hardening-migrations.md). Apply migration 06 if not already applied, then apply migrations 07 and 08. Do not run a down migration unless the owner explicitly requests rollback.
+2. Set SUPABASE_SERVICE_ROLE_KEY server-side (never NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY). Geo/currency requires no added environment setting: code prefers ingress X-Real-IP, then the leftmost public X-Forwarded-For entry, and falls back to USD if unavailable. SIGNUP_IP_HASH_SALT is optional; without it no IP hash is stored. Verify your host's forwarded-header behavior before production.
+3. Confirm the NGN price schedule with the owner. Build-time overrides: NEXT_PUBLIC_BASIC_PRICE_NGN, NEXT_PUBLIC_PRO_PRICE_NGN, NEXT_PUBLIC_PREMIUM_PRICE_NGN. Existing defaults are ₦15,000 / ₦35,000 / ₦60,000. NEXT_PUBLIC_NGN_USD_REFERENCE_RATE is a documented reference-rate field only; prices are explicit amounts, not silent conversions.
+4. Test new signup from a Nigerian public IP: `user_plans` should record NG + NGN; from US/GB: country code + USD. Signup must still succeed if `ipapi.co` is unavailable (USD fallback). Repeat callback/geo requests and a VPN change; the saved country/currency must remain locked. Confirm an admin can apply and view a deliberate currency override.
+5. Confirm `/api/account/geo`, `/api/account/consent`, and `/api/account/onboarding` return 401 without a bearer token. Verify server-only keys are not in browser bundles or DevTools Sources/Network.
+6. Accept all, choose necessary only, customize each optional category, reload, upgrade policy version, and reopen settings from the global footer. Verify that no optional third-party scripts/cookies load before consent; repeat in a fresh profile.
+7. Complete onboarding, save-and-skip, reload/resume, edit the profile, verify it appears in the admin breakdown and is included in AI search context. Test input length/control-character rejection.
+8. Verify auth/sign-in, search each platform, save/remove leads, category flows, pricing, Paystack verification, enrichment, and admin pages with authorized accounts.
+9. Inspect browser console and Network tab on landing, auth, dashboard/search, leads, pricing, settings, legal, onboarding, and admin routes. Record genuine errors in `docs/BUGLOG.md`; do not suppress console output.
+10. Run the labeled lead-quality evaluation: 10 queries × 20 real provider results each, with independent labels. Explicitly assert furniture has 0 realtors and 0 media accounts; report precision using accepted leads only. Current unit fixtures are synthetic and are not the requested live evaluation.
+
+Local automated checks: `npx tsc --noEmit`, `npm test`, `npm run build`. Live Supabase, payment, search-provider, browser-console, and 200-result lead evaluation remain manual because they require an authenticated project and third-party data/credentials.
 
 Known limitation: browser E2E/console review and live Supabase integration need the owner's authenticated local session and database migration. No signup or paid API test was run to avoid creating accounts or consuming credits.

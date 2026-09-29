@@ -1,0 +1,10 @@
+import Link from "next/link";
+
+export default function CookiePolicyPage() {
+  return <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800"><p className="mb-4 inline-block rounded bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Draft for legal review</p><h1 className="mb-2 text-4xl font-bold">Cookie Policy</h1><p className="mb-8 text-sm text-slate-500">Effective date: [EFFECTIVE DATE]</p>
+    <p>Creata uses browser storage to keep the service working and remember your optional cookie choices. This draft describes the current application source as reviewed on 29 September 2026. Confirm deployment configuration and vendors before publication.</p>
+    <h2 className="mt-8 text-xl font-semibold">Categories</h2><ul className="mt-3 list-disc space-y-2 pl-6"><li><b>Necessary:</b> authentication/session storage and your consent choice. These are required for requested services.</li><li><b>Preferences:</b> [LIST PREFERENCE STORAGE AFTER VERIFICATION].</li><li><b>Analytics:</b> [NAME PROVIDER, PURPOSE, AND RETENTION IF ENABLED].</li><li><b>Marketing:</b> [NAME PROVIDERS AND PURPOSE IF ENABLED].</li></ul>
+    <p className="mt-5">Optional categories default to off. Creata currently includes no analytics or advertising tag in the inspected application source. A later optional script must be loaded only after the matching choice is saved. The consent record stores a policy version, timestamp, and category choices in a first-party cookie; when signed in, the same record is also sent to Creata for storage. Cookie lifetime: six months.</p>
+    <h2 className="mt-8 text-xl font-semibold">Manage choices</h2><p className="mt-3">Use the Cookie settings link in the site footer to reopen your choices. You can also manage cookies in your browser. Blocking necessary storage may prevent sign-in or service features from working.</p>
+    <p className="mt-8">Questions: [CONTACT EMAIL]</p><Link className="mt-6 inline-block underline" href="/privacy-policy">Privacy Policy</Link></main>;
+}

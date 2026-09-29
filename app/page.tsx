@@ -13,6 +13,7 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
 import LandingPage from "@/components/landing/LandingPage";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -47,9 +48,10 @@ export default function Home() {
     setError(null);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
       const response = await fetch("/api/discover", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(sessionData.session?.access_token ? { Authorization: `Bearer ${sessionData.session.access_token}` } : {}) },
         body: JSON.stringify({
           query,
           tier,

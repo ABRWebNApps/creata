@@ -20,6 +20,15 @@ export type PlanPricing = {
   emoji: string;
 };
 
+// Public pricing configuration. Current defaults preserve CREATA's listed rates;
+// an owner can override these at build time without introducing a hidden conversion.
+export const NGN_USD_REFERENCE_RATE = Number(process.env.NEXT_PUBLIC_NGN_USD_REFERENCE_RATE || 0);
+function ngnPrice(value: string | undefined, fallback: number): number {
+  if (!value?.trim()) return fallback;
+  const configured = Number(value);
+  return Number.isFinite(configured) && configured >= 0 ? configured : fallback;
+}
+
 export const PLAN_PRICING: Record<PlanId, PlanPricing> = {
   free: {
     id: "free", name: "Free", usd: 0, ngn: 0,
@@ -28,7 +37,7 @@ export const PLAN_PRICING: Record<PlanId, PlanPricing> = {
     emoji: "🎁",
   },
   basic: {
-    id: "basic", name: "Basic", usd: 11, ngn: 15000,
+    id: "basic", name: "Basic", usd: 11, ngn: ngnPrice(process.env.NEXT_PUBLIC_BASIC_PRICE_NGN, 15000),
     creditsOnSubscribe: 15, maxLeadsPerSearch: 20, canEnrich: false,
     features: [
       "15 search credits", "social media lead ranking",
@@ -38,7 +47,7 @@ export const PLAN_PRICING: Record<PlanId, PlanPricing> = {
     emoji: "🚀",
   },
   pro: {
-    id: "pro", name: "Pro", usd: 25, ngn: 35000,
+    id: "pro", name: "Pro", usd: 25, ngn: ngnPrice(process.env.NEXT_PUBLIC_PRO_PRICE_NGN, 35000),
     creditsOnSubscribe: 35, maxLeadsPerSearch: 30, canEnrich: true,
     features: [
       "35 search credits", "lead extracting", "email finder",
@@ -49,7 +58,7 @@ export const PLAN_PRICING: Record<PlanId, PlanPricing> = {
     emoji: "⚡",
   },
   premium: {
-    id: "premium", name: "Premium", usd: 40, ngn: 60000,
+    id: "premium", name: "Premium", usd: 40, ngn: ngnPrice(process.env.NEXT_PUBLIC_PREMIUM_PRICE_NGN, 60000),
     creditsOnSubscribe: 50, maxLeadsPerSearch: 40, canEnrich: true,
     features: [
       "50 search credits", "lead extracting", "email finder",

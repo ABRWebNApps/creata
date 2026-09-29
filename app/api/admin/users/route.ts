@@ -42,12 +42,22 @@ export async function GET(req: NextRequest) {
       search_count: searchCountMap.get(u.id) ?? 0,
       last_active: lastActiveMap.get(u.id) ?? null,
       created_at: u.created_at,
+      country_code: plansMap.get(u.id)?.country_code ?? null,
+      currency: plansMap.get(u.id)?.currency ?? null,
+      signup_date: u.created_at,
     }));
 
     return NextResponse.json(users);
   }
 
-  return NextResponse.json(data);
+  const { data: geoRows } = await supabaseAdmin.from("user_plans").select("user_id,country_code,currency");
+  const geoByUser = new Map((geoRows ?? []).map((row) => [row.user_id, row]));
+  const enriched = Array.isArray(data) ? data.map((row: Record<string, unknown>) => {
+    const userId = String(row.user_id ?? row.id ?? "");
+    const geo = geoByUser.get(userId);
+    return { ...row, country_code: geo?.country_code ?? null, currency: geo?.currency ?? null, signup_date: row.created_at ?? null };
+  }) : data;
+  return NextResponse.json(enriched);
 }
 
 export async function PATCH(req: NextRequest) {
@@ -55,7 +65,7 @@ export async function PATCH(req: NextRequest) {
   if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { user_id, status, status_reason, credits_remaining } = body;
+  const { user_id, status, status_reason, credits_remaining, country_code, currency } = body;
   if (!user_id) {
     return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
   }
@@ -71,6 +81,14 @@ export async function PATCH(req: NextRequest) {
   // Allow admin to set credits (positive = set to that amount)
   if (credits_remaining !== undefined) {
     updateFields.credits_remaining = credits_remaining;
+  }
+
+  if (country_code !== undefined || currency !== undefined) {
+    if (country_code !== undefined && country_code !== null && (typeof country_code !== "string" || !/^[A-Z]{2}$/.test(country_code))) return NextResponse.json({ error: "country_code must be an ISO alpha-2 code or null" }, { status: 400 });
+    if (currency !== undefined && !["NGN", "USD"].includes(currency)) return NextResponse.json({ error: "currency must be NGN or USD" }, { status: 400 });
+    if (country_code !== undefined) updateFields.country_code = country_code;
+    if (currency !== undefined) updateFields.currency = currency;
+    updateFields.geo_source = "admin_override";
   }
 
   // Ensure plan is set for upsert

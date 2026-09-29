@@ -1,17 +1,25 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 
 /** Returns only a syntactically valid public client IP from proxy headers. */
 export function getPublicClientIp(headers: Headers): string | null {
-  const forwarded = headers.get("x-forwarded-for")?.split(",").map((value) => value.trim()) ?? [];
-  const candidates = [...forwarded, headers.get("x-real-ip") ?? ""];
+  // Prefer the single-client header set by common hosting ingress. If unavailable,
+  // use the conventional leftmost client entry from XFF; an optional exact-IP
+  // proxy list enables walking the chain from right to left safely.
+  const trustedProxies = new Set((process.env.TRUSTED_PROXY_IPS || "").split(",").map((value) => value.trim()).filter(Boolean));
+  const rawForwarded = headers.get("x-forwarded-for")?.split(",").map((value) => value.trim()) ?? [];
+  const forwarded = trustedProxies.size ? rawForwarded.reverse() : rawForwarded;
+  const candidates = [headers.get("x-real-ip") ?? "", ...forwarded];
   for (const candidate of candidates) {
     if (!candidate || candidate.length > 64 || candidate.includes("%")) continue;
     const normalized = candidate.replace(/^\[|\]$/g, "");
-    const isV4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(normalized);
-    const isV6 = normalized.includes(":") && /^[0-9a-f:]+$/i.test(normalized);
-    if (!isV4 && !isV6) continue;
-    if (isV4 && normalized.split(".").some((part) => Number(part) > 255)) continue;
-    if (normalized === "::1" || normalized.startsWith("127.") || normalized.startsWith("10.") || normalized.startsWith("192.168.") || normalized.startsWith("169.254.") || /^172\.(1[6-9]|2\d|3[01])\./.test(normalized) || normalized.toLowerCase().startsWith("fc") || normalized.toLowerCase().startsWith("fd") || normalized.toLowerCase().startsWith("fe80:")) continue;
+    const family = isIP(normalized);
+    if (!family) continue;
+    if (trustedProxies.has(normalized)) continue;
+    const lower = normalized.toLowerCase();
+    const privateV4 = family === 4 && (normalized.startsWith("10.") || normalized.startsWith("127.") || normalized.startsWith("0.") || normalized.startsWith("169.254.") || normalized.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(normalized) || normalized.startsWith("100.64.") || normalized === "255.255.255.255");
+    const privateV6 = family === 6 && (lower === "::" || lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80:") || lower.startsWith("ff") || lower.startsWith("::ffff:127.") || lower.startsWith("::ffff:10."));
+    if (privateV4 || privateV6) continue;
     return normalized;
   }
   return null;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints, isHighValueLead } from '../utils';
+import { suggestPainPoints } from '../utils';
 
 type LinkedInCreator = {
   handle: string;
@@ -179,7 +179,6 @@ export async function POST(request: NextRequest) {
 
           const score = calcScore(followerCount, email !== null, !!profileData.about);
           const painPoints = suggestPainPoints(profileData.about);
-          if (!isHighValueLead(profileData.about || null, entry.matched_comment || null, keywords)) continue;
 
           creators.push({
             handle: entry.handle,
@@ -215,7 +214,6 @@ export async function POST(request: NextRequest) {
 
           const score = calcScore(followerCount, false, false);
           const painPoints = suggestPainPoints(entry.post_description);
-          if (!isHighValueLead(entry.post_description || null, entry.matched_comment || null, keywords)) continue;
 
           creators.push({
             handle: entry.handle,
@@ -257,7 +255,6 @@ export async function POST(request: NextRequest) {
 
       const score = calcScore(followerCount, false, false);
       const painPoints = suggestPainPoints(entry.post_description);
-      if (!isHighValueLead(entry.post_description || null, entry.matched_comment || null, keywords)) continue;
 
       creators.push({
         handle: entry.handle,

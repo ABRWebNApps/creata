@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints, isHighValueLead } from "../utils";
+import { suggestPainPoints } from "../utils";
 
 type FacebookCreator = {
   handle: string;
@@ -132,7 +132,6 @@ export async function POST(request: NextRequest) {
           };
 
           // Filter: pass snapshot body text as bio + cta text as matchedContent
-          if (!isHighValueLead(creator.bio, creator.matched_caption || null, keywords)) continue;
           creators.push(creator);
         }
       } catch (err) {
@@ -145,7 +144,6 @@ export async function POST(request: NextRequest) {
     const toFetch = creators.slice(0, MAX_PROFILE_FETCHES);
     await Promise.allSettled(
       toFetch.map(async (lead) => {
-        if (!isHighValueLead(lead.bio || null, lead.matched_caption || null, keywords)) return;
         try {
           const res = await fetch(
             `https://api.scrapecreators.com/v1/facebook/profile?url=${encodeURIComponent(lead.profile_url)}`,

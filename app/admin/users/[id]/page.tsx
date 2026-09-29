@@ -23,6 +23,8 @@ type UserDetail = {
   isAdmin: boolean;
   created_at?: string;
   last_active?: string;
+  country_code?: string | null;
+  currency?: string | null;
 };
 
 type ActivityLog = {
@@ -94,6 +96,9 @@ export default function AdminUserDetailPage() {
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [planMessage, setPlanMessage] = useState("");
   const [planSuccess, setPlanSuccess] = useState(false);
+  const [geoCountry, setGeoCountry] = useState("");
+  const [geoCurrency, setGeoCurrency] = useState("USD");
+  const [geoMessage, setGeoMessage] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!userId) return;
@@ -117,6 +122,8 @@ export default function AdminUserDetailPage() {
         isAdmin: u.is_admin ?? u.isAdmin ?? false,
         created_at: u.created_at || null,
         last_active: u.last_active || null,
+        country_code: u.country_code || null,
+        currency: u.currency || null,
       }));
       const foundUser = usersList.find((u) => u.id === userId);
       if (!foundUser) {
@@ -125,6 +132,8 @@ export default function AdminUserDetailPage() {
       } else {
         setUser(foundUser);
         setSelectedPlan(foundUser.plan);
+        setGeoCountry(foundUser.country_code ?? "");
+        setGeoCurrency(foundUser.currency ?? "USD");
       }
 
       setLogs(logsRes.data ?? logsRes.logs ?? []);
@@ -156,6 +165,18 @@ export default function AdminUserDetailPage() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const updateGeo = async () => {
+    if (!user) return;
+    setActionLoading(true);
+    setGeoMessage("");
+    try {
+      await adminFetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: user.id, country_code: geoCountry || null, currency: geoCurrency }) });
+      setGeoMessage("Signup country and currency updated.");
+      await fetchData();
+    } catch (err) { setGeoMessage(err instanceof Error ? err.message : "Could not update signup country/currency."); }
+    finally { setActionLoading(false); }
   };
 
   const changePlan = async () => {
@@ -294,6 +315,16 @@ export default function AdminUserDetailPage() {
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 self-start">
                       <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
                     </button>
+                  </div>
+
+                  <div className="mb-6 rounded-2xl border border-gray-100 p-5 bg-gray-50/50">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Signup country and currency override</p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <label className="text-xs text-gray-500">Country code<input maxLength={2} value={geoCountry} onChange={(e) => setGeoCountry(e.target.value.toUpperCase())} placeholder="NG" className="mt-1 block w-full rounded-lg border p-2 text-sm" /></label>
+                      <label className="text-xs text-gray-500">Currency<select value={geoCurrency} onChange={(e) => setGeoCurrency(e.target.value)} className="mt-1 block w-full rounded-lg border p-2 text-sm"><option value="NGN">NGN</option><option value="USD">USD</option></select></label>
+                      <button onClick={updateGeo} disabled={actionLoading || (geoCountry !== "" && !/^[A-Z]{2}$/.test(geoCountry))} className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50">Save override</button>
+                    </div>
+                    {geoMessage && <p className="mt-2 text-sm" role="status">{geoMessage}</p>}
                   </div>
 
                   {/* Info cards row */}

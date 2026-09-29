@@ -4,6 +4,8 @@ import { AuthProvider } from "@/lib/auth-context";
 import { SubscriptionProvider } from "@/lib/subscription-context";
 import GlobalBackground from "@/components/GlobalBackground";
 import Nav from "@/components/Nav";
+import CookieConsent from "@/components/CookieConsent";
+import SiteLegalFooter from "@/components/SiteLegalFooter";
 
 export const metadata: Metadata = {
   title: "Creata — Lead & Customer Acquisition Platform | Find Buyers With Buying Intent",
@@ -49,6 +51,8 @@ export default function RootLayout({
             <GlobalBackground>
               <Nav />
               {children}
+              <SiteLegalFooter />
+              <CookieConsent />
             </GlobalBackground>
           </SubscriptionProvider>
         </AuthProvider>

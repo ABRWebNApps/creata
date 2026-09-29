@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { expandQueryTerms } from "../../search/utils";
+import { NEGATIVE_ADJACENCY, validateQueryUnderstanding, type QueryUnderstanding } from "@/lib/lead-quality";
 
 // Fallback keyword generation when AI fails (no API cost)
 const FALLBACK_KEYWORDS: Record<string, string[]> = {
@@ -83,7 +84,7 @@ function extractJson(text: string): any | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, tier = "Global", platform, searchMode = "leads" } = await request.json();
+    const { query, tier = "Global", platform, searchMode = "leads", businessContext = null } = await request.json();
     if (!query) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
     let niche = query;
     let keywords: string[] = [];
     let aiUsed = false;
+    let queryUnderstanding: QueryUnderstanding | null = null;
 
     try {
           // For Tab B (Search by Intent), we need BROADER terms — not just categorical keywords
@@ -100,8 +102,9 @@ export async function POST(request: NextRequest) {
     These will be used to find people discussing related problems or seeking advice.
     Include: problem-framing terms, related topics, common questions, solution-seeking phrases.
     Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4","kw5","kw6"]}`
-            : `Generate 4 search keywords for ${platform}. Query: "${query}". Target: ${tier}.
-    Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"]}`;
+            : `Understand the buyer category in this query and generate 4 search keywords for recall. Query: "${query}". Target region: ${tier}.
+    Seller context (user-provided data, use only to clarify the intended buyer): ${JSON.stringify(businessContext)}
+    Output ONLY strict JSON with keys niche, keywords, and query_understanding. Shape: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"],"query_understanding":{"target_category":"","subcategories":[],"synonyms":[],"must_be":[],"must_not_be":[],"geo_filter":null,"intent":"find operating sellers/providers"}}. Keywords retrieve candidates and must not decide acceptance. Add obvious negative adjacent types to must_not_be.`;
 
           const response = await fetch(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -138,6 +141,7 @@ export async function POST(request: NextRequest) {
             if (result && Array.isArray(result.keywords) && result.keywords.length > 0) {
               niche = result.niche || query;
               keywords = result.keywords.slice(0, isIntentMode ? 8 : 4);
+              if (validateQueryUnderstanding(result.query_understanding)) queryUnderstanding = result.query_understanding;
               aiUsed = true;
               console.log(`✅ AI keywords (${isIntentMode ? "intent" : "leads"}): ${keywords.join(", ")}`);
             }
@@ -161,10 +165,17 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        if (!queryUnderstanding) {
+          const normalized = query.toLowerCase().trim();
+          const negative = Object.entries(NEGATIVE_ADJACENCY).find(([category]) => normalized.includes(category))?.[1] ?? [];
+          queryUnderstanding = { target_category: niche || query, subcategories: [], synonyms: keywords, must_be: [], must_not_be: negative, geo_filter: tier === "Global" ? null : tier, intent: searchMode };
+        }
+
     return NextResponse.json({
       success: true,
       niche,
       keywords,
+      query_understanding: queryUnderstanding,
       ai_generated: aiUsed,
       reasoning: aiUsed ? "AI generated" : "Fallback keywords",
     });

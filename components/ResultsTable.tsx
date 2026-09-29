@@ -39,13 +39,23 @@ interface Lead {
     video_count?: number;
     instagram_handle?: string;
     matched_comment?: string;
-    matched_caption?: string;
+  matched_caption?: string;
+  problem_analysis?: {
+    what_is_broken: { claim: string; evidence: string; source_url?: string }[];
+    severity: "low" | "medium" | "high";
+    likely_pain_points: string[];
+    missed_opportunities: string[];
+    how_we_can_help: string;
+    suggested_opener: string;
+    confidence: number;
+  };
   }
 
 interface ResultsTableProps {
   data: {
     creators?: Lead[];
     total_found?: number;
+    quality_gate?: { input_count?: number; accepted_count?: number; requested_count?: number; message?: string | null };
   };
 }
 
@@ -116,7 +126,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     return (
       <div className="bg-background rounded-2xl border shadow-sm p-12 text-center">
         <p className="text-muted-foreground">
-          No leads found. Try a different search query.
+          {data?.quality_gate?.message ?? "No leads found. Try a different search query."}
         </p>
       </div>
     );
@@ -326,6 +336,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
 
   return (
     <div className="space-y-4">
+      {data?.quality_gate?.message && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">{data.quality_gate.message}</p>}
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -439,6 +450,15 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                   </>
                                 )}
                               </div>
+                            )}
+
+                            {creator.problem_analysis && (
+                              <section className="mb-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3" aria-label="Evidence-based problem analysis">
+                                <div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-amber-950">Problem analysis</p><span className="text-[10px] text-amber-800">Confidence {Math.round(creator.problem_analysis.confidence * 100)}%</span></div>
+                                {creator.problem_analysis.what_is_broken.length > 0 ? creator.problem_analysis.what_is_broken.map((item, i) => <p key={i} className="mb-2 text-xs text-amber-950"><b>{item.claim}</b><br /><span className="text-amber-800">Evidence: “{item.evidence}”</span>{item.source_url && <> · <a className="underline" href={item.source_url} target="_blank" rel="noreferrer">Source</a></>}</p>) : <p className="text-xs text-amber-900">Insufficient public evidence for a specific problem claim.</p>}
+                                <p className="mt-2 text-xs text-slate-700">{creator.problem_analysis.how_we_can_help}</p>
+                                <p className="mt-2 text-xs text-slate-700"><b>Suggested opener:</b> {creator.problem_analysis.suggested_opener}</p>
+                              </section>
                             )}
 
                             <div className="flex items-center gap-3 mb-3">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CookieSettingsButton from "@/components/CookieSettingsButton";
 
 export default function LandingFooter() {
   return (
@@ -32,6 +33,10 @@ export default function LandingFooter() {
             <a href="mailto:support@creata.tech" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">
               Contact
             </a>
+            <Link href="/cookie-policy" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Cookie Policy</Link>
+            <Link href="/privacy-policy" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Privacy</Link>
+            <Link href="/terms" className="text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition-colors">Terms</Link>
+            <CookieSettingsButton />
           </nav>
         </div>
         <p className="text-sm text-[var(--color-ink-soft)] text-center sm:text-left mt-8 sm:mt-6">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints, isHighValueLead } from "../utils";
+import { suggestPainPoints } from "../utils";
 
 type TikTokCreator = {
   handle: string;
@@ -194,7 +194,6 @@ export async function POST(request: NextRequest) {
             if (minFollowers !== undefined && minFollowers !== null && stats.followerCount < minFollowers) continue;
                                     if (maxFollowers !== undefined && maxFollowers !== null && stats.followerCount > maxFollowers) continue;
 
-                                    if (!isHighValueLead(user.signature || null, entry.matched_comment || null, keywords)) continue;
 
                                     creators.push({
                                                   handle: user.uniqueId,
@@ -228,7 +227,6 @@ export async function POST(request: NextRequest) {
             ? parseFloat((Math.random() * 3 + 2).toFixed(2))
             : parseFloat((Math.random() * 5 + 3).toFixed(2));
 
-          if (!isHighValueLead(entry.bio || null, entry.matched_comment || null, keywords)) continue;
                     creators.push({
                                 handle: entry.handle,
                                 nickname: entry.nickname,
@@ -268,7 +266,6 @@ export async function POST(request: NextRequest) {
         ? parseFloat((Math.random() * 3 + 2).toFixed(2))
         : parseFloat((Math.random() * 5 + 3).toFixed(2));
 
-              if (!isHighValueLead(entry.bio || null, entry.matched_comment || null, keywords)) continue;
 
               creators.push({
               handle: entry.handle,

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { filterRelevantLeads } from "@/lib/lead-quality";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +13,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+    const { data: { user } } = token ? await supabaseAdmin.auth.getUser(token) : { data: { user: null } };
+    const { data: profile } = user ? await supabaseAdmin.from("onboarding_profiles").select("role,business_type,industry,offer,ideal_customer,target_regions,main_goal").eq("user_id", user.id).maybeSingle() : { data: null };
+    const businessContext = profile ? { role: profile.role, business_type: profile.business_type, industry: profile.industry, offer: profile.offer, ideal_customer: profile.ideal_customer, target_regions: profile.target_regions, goal: profile.main_goal } : null;
+
     console.log("🔍 Discovery started:", { query, platform, tier, searchMode, minFollowers, maxFollowers });
 
     // STEP 1: Generate keywords with AI
@@ -20,7 +27,7 @@ export async function POST(request: NextRequest) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, tier, platform, searchMode }),
+        body: JSON.stringify({ query, tier, platform, searchMode, businessContext }),
       }
     );
 
@@ -60,12 +67,21 @@ export async function POST(request: NextRequest) {
     }
 
     const searchData = await searchResponse.json();
-    console.log(`✅ Found ${searchData.total_found} ${platform} creators`);
+    const relevantCreators = await filterRelevantLeads(
+      keywordData.query_understanding?.target_category || query,
+      Array.isArray(searchData.creators) ? searchData.creators : [],
+      businessContext?.offer || "",
+      businessContext?.target_regions || [],
+      keywordData.query_understanding?.must_be || [],
+      keywordData.query_understanding?.must_not_be || [],
+      keywordData.query_understanding?.geo_filter || (tier === "Global" ? null : tier),
+    );
 
     // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
-    const cappedCreators = maxLeads && searchData.creators?.length > maxLeads
-      ? searchData.creators.slice(0, maxLeads)
-      : searchData.creators;
+    const cappedCreators = maxLeads && relevantCreators.length > maxLeads
+      ? relevantCreators.slice(0, maxLeads)
+      : relevantCreators;
+    const requestedCount = typeof maxLeads === "number" && maxLeads > 0 ? maxLeads : 20;
 
     return NextResponse.json({
       success: true,
@@ -74,6 +90,8 @@ export async function POST(request: NextRequest) {
       platform: platform,
       keywords: keywordData.keywords,
       niche: keywordData.niche,
+      business_context_applied: Boolean(businessContext),
+      quality_gate: { input_count: Array.isArray(searchData.creators) ? searchData.creators.length : 0, accepted_count: cappedCreators.length, requested_count: requestedCount, fail_closed: relevantCreators.length === 0, message: cappedCreators.length < requestedCount ? `Returned ${cappedCreators.length} of ${requestedCount} requested. Other profiles did not meet the evidence threshold or could not be verified.` : null },
     });
   } catch (error: any) {
     console.error("❌ Discovery error:", error);

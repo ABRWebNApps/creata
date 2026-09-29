@@ -154,6 +154,18 @@ export function SubscriptionProvider({
     try { localStorage.setItem(LS_KEYS.currency, c); } catch {}
   }, []);
 
+  useEffect(() => {
+    const syncSignupCurrency = (event: Event) => {
+      const currency = (event as CustomEvent).detail;
+      if (currency !== "NGN" && currency !== "USD") return;
+      try { if (localStorage.getItem(LS_KEYS.currency)) return; } catch { return; }
+      setPreferredCurrency(currency);
+      try { localStorage.setItem(LS_KEYS.currency, currency); } catch { /* storage may be unavailable */ }
+    };
+    window.addEventListener("creata:signup-currency", syncSignupCurrency);
+    return () => window.removeEventListener("creata:signup-currency", syncSignupCurrency);
+  }, []);
+
   const loadSubscription = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
 
@@ -194,6 +206,10 @@ export function SubscriptionProvider({
       }
 
       if (data) {
+        // Use the locked signup currency unless the user has explicitly chosen a display preference.
+        try {
+          if (!localStorage.getItem(LS_KEYS.currency) && (data.currency === "NGN" || data.currency === "USD")) setPreferredCurrency(data.currency);
+        } catch { /* currency display falls back to the current preference */ }
         // Map legacy "agency" plan to "premium"
         const rawPlan = data.plan ?? "free";
         const plan: Plan = rawPlan === "agency" ? "premium" : (rawPlan as Plan);

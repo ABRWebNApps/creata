@@ -30,6 +30,9 @@ type User = {
   isAdmin: boolean;
   last_active: string | null;
   created_at: string | null;
+  country_code?: string | null;
+  currency?: string | null;
+  signup_date?: string | null;
 };
 
 const STATUS_BADGE: Record<string, { label: string; classes: string }> = {
@@ -91,6 +94,9 @@ export default function AdminUsersPage() {
         isAdmin: u.is_admin ?? u.isAdmin ?? false,
         last_active: u.last_active || null,
         created_at: u.created_at || null,
+        country_code: u.country_code || null,
+        currency: u.currency || null,
+        signup_date: u.signup_date || u.created_at || null,
       }));
       setUsers(list);
       setFiltered(list);
@@ -287,6 +293,9 @@ export default function AdminUsersPage() {
                         <th className="text-left px-5 py-3.5 font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
                           Searches
                         </th>
+                        <th className="text-left px-5 py-3.5 font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Country</th>
+                        <th className="text-left px-5 py-3.5 font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Currency</th>
+                        <th className="text-left px-5 py-3.5 font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Signup date</th>
                         <th className="text-left px-5 py-3.5 font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
                           Status
                         </th>
@@ -302,7 +311,7 @@ export default function AdminUsersPage() {
                       {filtered.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={10}
                             className="px-5 py-12 text-center text-sm text-gray-400 dark:text-gray-500"
                           >
                             {search
@@ -326,6 +335,9 @@ export default function AdminUsersPage() {
                               </td>
                               <td className="px-5 py-4">{user.credits}</td>
                               <td className="px-5 py-4">{user.search_count}</td>
+                              <td className="px-5 py-4">{user.country_code ?? "—"}</td>
+                              <td className="px-5 py-4">{user.currency ?? "—"}</td>
+                              <td className="px-5 py-4">{user.signup_date ? new Date(user.signup_date).toLocaleDateString() : "—"}</td>
                               <td className="px-5 py-4">
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusBadge.classes}`}
