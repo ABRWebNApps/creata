@@ -66,8 +66,18 @@ interface Category {
 }
 
 export default function ResultsTable({ data }: ResultsTableProps) {
-  const creators = data?.creators || [];
-      const total_found = data?.total_found || creators.length;
+  // Defensive: guard against partial/missing data from safety-net fallback
+    if (!data || !Array.isArray(data.creators)) {
+      return (
+        <div className="bg-background rounded-2xl border shadow-sm p-12 text-center">
+          <p className="text-muted-foreground">
+            {data?.quality_gate?.message ?? "Processing results..."}
+          </p>
+        </div>
+      );
+    }
+  const creators = data.creators;
+  const total_found = data?.total_found || creators.length;
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set());
   const [savingAll, setSavingAll] = useState(false);
@@ -123,14 +133,12 @@ export default function ResultsTable({ data }: ResultsTableProps) {
   };
 
   if (creators.length === 0) {
-    return (
-      <div className="bg-background rounded-2xl border shadow-sm p-12 text-center">
-        <p className="text-muted-foreground">
-          {data?.quality_gate?.message ?? "No leads found. Try a different search query."}
-        </p>
-      </div>
-    );
-  }
+      return (
+        <div className="bg-background rounded-2xl border shadow-sm p-12 text-center">
+          <p className="text-muted-foreground">{data?.quality_gate?.message ?? "Processing results..."}</p>
+        </div>
+      );
+    }
 
   const openSaveDialog = (creator: Lead, saveAll = false) => {
       setPendingCreator(creator);

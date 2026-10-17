@@ -14,18 +14,19 @@ export async function logActivity(
   details: Record<string, unknown> = {}
 ) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      email: user.email,
-      action,
-      details,
+    // Grab the current session token so the server can authenticate us
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    await fetch("/api/activity/log", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ action, details }),
     });
-  } catch (err) {
+  } catch {
     // silent — logging should never break the app
-    console.warn("logActivity failed:", err);
   }
 }
 

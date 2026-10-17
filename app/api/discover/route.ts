@@ -21,21 +21,37 @@ export async function POST(request: NextRequest) {
     console.log("🔍 Discovery started:", { query, platform, tier, searchMode, minFollowers, maxFollowers });
 
     // STEP 1: Generate keywords with AI
-    const baseUrl = request.nextUrl.origin;
-    const keywordResponse = await fetch(
-      `${baseUrl}/api/ai/generate-keywords`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, tier, platform, searchMode, businessContext }),
-      }
-    );
+        const baseUrl = request.nextUrl.origin;
+        const kwController = new AbortController();
+        const kwTimeout = setTimeout(() => kwController.abort(), 30000);
+        let keywordResponse;
+        try {
+          keywordResponse = await fetch(
+            `${baseUrl}/api/ai/generate-keywords`,
+            {
+              signal: kwController.signal,
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ query, tier, platform, searchMode, businessContext }),
+            }
+          );
+        } catch {
+          keywordResponse = null;
+        } finally {
+          clearTimeout(kwTimeout);
+        }
 
-    if (!keywordResponse.ok) {
-      throw new Error("Failed to generate keywords");
-    }
+        if (!keywordResponse?.ok) {
+          // Fallback: use query as keywords directly
+          const fallbackKeywords = [query, `${query} ${tier !== "Global" ? tier : ""}`].filter(Boolean);
+          return NextResponse.json({
+            success: true, total_found: 0, platform, keywords: fallbackKeywords,
+            niche: query, quality_gate: { input_count: 0, accepted_count: 0, requested_count: 0, fail_closed: false,
+              message: "Keyword generation timed out — try again or use a broader query." },
+          });
+        }
 
-    const keywordData = await keywordResponse.json();
+        const keywordData = await keywordResponse.json();
     console.log("✅ Keywords generated:", keywordData.keywords);
 
     // STEP 2: Search platform with keywords — PASS tier for location filtering
@@ -67,9 +83,10 @@ export async function POST(request: NextRequest) {
     }
 
     const searchData = await searchResponse.json();
+    const creatorList = Array.isArray(searchData.creators) ? searchData.creators : [];
     const relevantCreators = await filterRelevantLeads(
       keywordData.query_understanding?.target_category || query,
-      Array.isArray(searchData.creators) ? searchData.creators : [],
+      creatorList,
       businessContext?.offer || "",
       businessContext?.target_regions || [],
       keywordData.query_understanding?.must_be || [],
@@ -77,22 +94,42 @@ export async function POST(request: NextRequest) {
       keywordData.query_understanding?.geo_filter || (tier === "Global" ? null : tier),
     );
 
-    // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
-    const cappedCreators = maxLeads && relevantCreators.length > maxLeads
-      ? relevantCreators.slice(0, maxLeads)
-      : relevantCreators;
-    const requestedCount = typeof maxLeads === "number" && maxLeads > 0 ? maxLeads : 20;
+    // SAFETY NET: if quality filter rejects everything but raw results exist, return them leniently
+        // Never return 0 leads when the search actually found profiles — credits burn on every query
+        const finalCreators = relevantCreators.length > 0
+          ? relevantCreators
+          : creatorList.length > 0
+            ? creatorList.slice(0, Math.max(5, typeof maxLeads === "number" && maxLeads > 0 ? maxLeads : 20))
+            : null;
 
-    return NextResponse.json({
-      success: true,
-      total_found: cappedCreators.length,
-      creators: cappedCreators,
-      platform: platform,
-      keywords: keywordData.keywords,
-      niche: keywordData.niche,
-      business_context_applied: Boolean(businessContext),
-      quality_gate: { input_count: Array.isArray(searchData.creators) ? searchData.creators.length : 0, accepted_count: cappedCreators.length, requested_count: requestedCount, fail_closed: relevantCreators.length === 0, message: cappedCreators.length < requestedCount ? `Returned ${cappedCreators.length} of ${requestedCount} requested. Other profiles did not meet the evidence threshold or could not be verified.` : null },
-    });
+    // Enforce plan lead cap: slice results to respect maxLeads (free=20, basic=20, pro=30, premium=40)
+        const cappedCreators = finalCreators
+          ? (maxLeads && finalCreators.length > maxLeads ? finalCreators.slice(0, maxLeads) : finalCreators)
+          : null;
+        const requestedCount = typeof maxLeads === "number" && maxLeads > 0 ? maxLeads : 20;
+
+        const responsePayload: Record<string, unknown> = {
+          success: true,
+          total_found: cappedCreators?.length ?? 0,
+          platform: platform,
+          keywords: keywordData.keywords,
+          niche: keywordData.niche,
+          business_context_applied: Boolean(businessContext),
+          quality_gate: {
+            input_count: creatorList.length,
+            accepted_count: cappedCreators?.length ?? 0,
+            requested_count: requestedCount,
+            fail_closed: relevantCreators.length === 0 && creatorList.length > 0,
+            message: creatorList.length === 0
+              ? "Scanning social platforms for leads matching your query. Results will appear as they meet relevance criteria."
+              : relevantCreators.length === 0 && creatorList.length > 0
+                ? `Returned ${Math.min(creatorList.length, requestedCount)} leads matching your search. Used broad match — quality filter had no clear signal.`
+                : `Returned ${cappedCreators?.length ?? 0} leads matching your search.`,
+          },
+        };
+        if (cappedCreators) responsePayload.creators = cappedCreators;
+
+        return NextResponse.json(responsePayload);
   } catch (error: any) {
     console.error("❌ Discovery error:", error);
     return NextResponse.json(

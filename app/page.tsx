@@ -323,8 +323,14 @@ export default function Home() {
       {user && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-36">
           {loading && (
-            <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
               <Loader />
+              <div className="text-center max-w-md">
+                <p className="text-lg font-semibold text-foreground">System is at work...</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Creata is scanning social platforms, analyzing profiles, and matching leads to your criteria. You can return to this tab in 1–2 minutes to see your results.
+                </p>
+              </div>
             </div>
           )}
           {error && (
