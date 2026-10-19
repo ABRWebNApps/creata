@@ -8,12 +8,13 @@ export async function getAuthUser(req: NextRequest) {
   if (token) {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
     if (!error && user) {
-      const { data: admin } = await supabaseAdmin
+      const { data: admin, error: adminErr } = await supabaseAdmin
         .from('admin_users')
         .select('user_id, role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (admin) return { ...user, admin_role: admin.role };
+      if (adminErr) console.error('[getAuthUser] admin_users query failed (token path):', adminErr.message);
     }
   }
 

@@ -28,9 +28,14 @@ export default function AdminLoginPage() {
         headers: { Authorization: `Bearer ${data.session.access_token}` },
       });
       if (!res.ok) {
+        let msg = "You don't have admin access";
+        if (res.status === 500) {
+          const body = await res.json().catch(() => ({}));
+          msg = body?.error || "Admin check failed (server error)";
+        }
         // Not an admin — sign them back out
         await supabase.auth.signOut();
-        throw new Error("You don't have admin access");
+        throw new Error(msg);
       }
 
       // Redirect to admin dashboard

@@ -15,12 +15,29 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 // Server-side admin client (bypasses RLS — use only in route handlers)
+// Logs a loud warning on startup if SUPABASE_SERVICE_ROLE_KEY is missing,
+// then falls back to the anon key (RLS applies, queries will be empty).
+// The individual route handlers will surface the real error as a 500.
 export const supabaseAdmin: SupabaseClient = typeof window === "undefined"
-  ? createClient(
-      supabaseUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    )
+  ? (() => {
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!key) {
+        console.error(
+          "\n⚠️  ⚠️  ⚠️  SUPABASE_SERVICE_ROLE_KEY IS NOT SET ⚠️  ⚠️  ⚠️\n" +
+          "The admin Supabase client is falling back to the anon key.\n" +
+          "Every server-side admin query (admin check, consent, onboarding,\n" +
+          "leads CRUD) will run with RLS active and most will return empty\n" +
+          "or produce 500 errors.\n" +
+          "Set SUPABASE_SERVICE_ROLE_KEY in Vercel Production dashboard,\n" +
+          "then redeploy.\n"
+        );
+      }
+      return createClient(
+        supabaseUrl,
+        key || supabaseKey,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+    })()
   : (null as unknown as SupabaseClient);
 
 // Types for our database

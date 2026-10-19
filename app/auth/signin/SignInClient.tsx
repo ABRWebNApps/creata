@@ -27,15 +27,28 @@ export default function SignInClientPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      const { data } = await supabase.auth.getSession();
+      // Resolve session after sign-in (retry briefly for race)
+      let session = (await supabase.auth.getSession()).data.session;
+      if (!session) {
+        const startedAt = Date.now();
+        while (!session && Date.now() - startedAt < 2000) {
+          await new Promise((r) => setTimeout(r, 100));
+          session = (await supabase.auth.getSession()).data.session;
+        }
+      }
+      // Fail-closed: only redirect to /onboarding when we positively know the
+      // profile is incomplete. On any error (503, network, missing table) go to
+      // "/" — never push a user into onboarding because a server call failed.
+      if (!session) { router.replace("/"); return; }
       try {
         const response = await fetch("/api/account/onboarding", {
-          headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        const result = response.ok ? await response.json() : null;
+        if (!response.ok) { router.replace("/"); return; }
+        const result = await response.json();
         router.replace(result?.profile?.completed_at ? "/" : "/onboarding");
       } catch {
-        router.replace("/onboarding");
+        router.replace("/");
       }
     }
   };
