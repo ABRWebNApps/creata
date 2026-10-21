@@ -1,4 +1,4 @@
-import SignalFeed from "./SignalFeed";
+import HeroVideo from "./HeroVideo";
 import WaveRidges from "./WaveRidges";
 import ChannelMarquee from "./ChannelMarquee";
 import StatBar from "./StatBar";
@@ -114,12 +114,12 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Right: Signal Feed */}
+            {/* Right: Hero video */}
             <div
               className="animate-scale-in w-full"
               style={{ animationDelay: "0.8s" }}
             >
-              <SignalFeed />
+              <HeroVideo videoId="dIMa5SJzXZk" />
             </div>
           </div>
         </div>
