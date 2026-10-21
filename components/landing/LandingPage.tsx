@@ -1,4 +1,5 @@
 import SignalFeed from "./SignalFeed";
+import WaveRidges from "./WaveRidges";
 import ChannelMarquee from "./ChannelMarquee";
 import StatBar from "./StatBar";
 import FeatureTabs from "./FeatureTabs";
@@ -51,10 +52,13 @@ export default function LandingPage() {
 
       {/* ── Hero ── */}
       <section className="relative pt-16 sm:pt-28 pb-10 sm:pb-16 overflow-hidden">
+        {/* Wave ridges background effect */}
+        <WaveRidges className="absolute inset-0 w-full h-full z-0 pointer-events-none" />
+
         {/* Soft radial blue glow */}
         <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-500/4 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="max-w-[1180px] mx-auto px-[20px] sm:px-8">
+        <div className="relative z-10 max-w-[1180px] mx-auto px-[20px] sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left: staggered headline */}
             <div>
