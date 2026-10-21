@@ -12,6 +12,49 @@ const FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape";
 const FIRECRAWL_TIMEOUT = 15_000;
 const FREE_ENGINE_TIMEOUT = 6_000;
 
+/* ── Retrying POST to Firecrawl ─────────────────────────────────────────
+ * 429 (rate limit) and transient 5xx are retried with exponential backoff
+ * (1s, 2s) so a burst of parallel queries does not silently degrade to
+ * "no results" — which is what pushed the engine onto generic fallbacks.
+ * ──────────────────────────────────────────────────────────────────── */
+async function firecrawlPost(url: string, body: Record<string, unknown>): Promise<Response | null> {
+  const apiKey = getFirecrawlApiKey();
+  if (!apiKey) return null;
+  const delays = [1000, 2000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FIRECRAWL_TIMEOUT);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) return res;
+      // Retry only on rate-limit / transient server errors
+      if ((res.status === 429 || res.status >= 500) && attempt < delays.length) {
+        const retryAfter = Number(res.headers.get("retry-after")) * 1000;
+        await new Promise((r) => setTimeout(r, retryAfter > 0 ? retryAfter : delays[attempt]));
+        continue;
+      }
+      console.error(`[osint] Firecrawl ${res.status} for ${url}`);
+      return null;
+    } catch {
+      if (attempt < delays.length) {
+        await new Promise((r) => setTimeout(r, delays[attempt]));
+        continue;
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
 /* ── HTML helpers ── */
 
 function stripTags(html: string): string {
@@ -134,29 +177,10 @@ async function bingSearch(query: string): Promise<SearchResult[]> {
 /* ── Firecrawl search — 1 credit. Used when free engines return nothing ── */
 
 async function firecrawlSearch(query: string): Promise<SearchResult[]> {
-  const apiKey = getFirecrawlApiKey();
-  if (!apiKey) return [];
+  const res = await firecrawlPost(FIRECRAWL_SEARCH_URL, { query, limit: 10 });
+  if (!res) return [];
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FIRECRAWL_TIMEOUT);
-
-    const res = await fetch(FIRECRAWL_SEARCH_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, limit: 10 }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-    if (!res.ok) {
-      console.error(`[osint] Firecrawl search ${res.status} for "${query}"`);
-      return [];
-    }
-
     const json = await res.json() as { success?: boolean; data?: Array<{ url: string; title?: string; description?: string }> };
     if (!json.success || !json.data) return [];
 
@@ -178,29 +202,10 @@ async function firecrawlSearch(query: string): Promise<SearchResult[]> {
  * which gets blocked on Vercel IPs).
  */
 export async function firecrawlScrape(url: string): Promise<string | null> {
-  const apiKey = getFirecrawlApiKey();
-  if (!apiKey) return null;
+  const res = await firecrawlPost(FIRECRAWL_SCRAPE_URL, { url, formats: ["markdown"] });
+  if (!res) return null;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FIRECRAWL_TIMEOUT);
-
-    const res = await fetch(FIRECRAWL_SCRAPE_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url, formats: ["markdown"] }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-    if (!res.ok) {
-      console.error(`[osint] Firecrawl scrape ${res.status} for ${url}`);
-      return null;
-    }
-
     const json = await res.json() as { success?: boolean; data?: { markdown?: string } };
     return json.success && json.data?.markdown ? json.data.markdown : null;
   } catch {

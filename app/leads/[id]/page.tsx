@@ -904,23 +904,7 @@ export default function LeadProfilePage({
                                                                             <p className="text-xs text-gray-400 mt-1">Try checking their bio or profile for existing contact links.</p>
                                                                           </div>
                                                                         )}
-
-                                                                        {/* Errors */}
-                                                                        {enrichResults.errors.length > 0 && (
-                                                                          <div className="mt-2 pt-3 border-t border-gray-100">
-                                                                            <details className="group">
-                                                                              <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 select-none">
-                                                                                {enrichResults.errors.length} search operation{enrichResults.errors.length > 1 ? "s" : ""} encountered issues <span className="group-open:hidden">▼</span><span className="hidden group-open:inline">▲</span>
-                                                                              </summary>
-                                                                              <div className="mt-2 space-y-1">
-                                                                                {enrichResults.errors.map((e, i) => (
-                                                                                  <p key={i} className="text-xs text-gray-400">{e}</p>
-                                                                                ))}
-                                                                              </div>
-                                                                            </details>
-                                                                          </div>
-                                                                        )}
-                                                                      </div>
+                                                                                                                                              </div>
                                                                     )}
                                                                   </div>
 

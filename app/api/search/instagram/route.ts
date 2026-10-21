@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
+import { resolveContact } from "@/lib/contact-extract";
 
 type InstagramCreator = {
   handle: string;
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
 
           seenHandles.add(profile.username);
 
-          let email: string | null = null;
-          const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-          const bioEmails = profile.biography?.match(emailRegex);
-          if (bioEmails?.length) email = bioEmails[0];
+          const { email, bioLink } = resolveContact({
+            bio: profile.biography,
+            structuredWebsite: profile.external_url || null,
+          });
 
           // Better engagement estimation based on profile type
           let engagementRate: number;
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
                       profile_url: `https://instagram.com/${profile.username}`,
                       avatar: profile.profile_pic_url || null,
                       bio: profile.biography || null,
-                      bioLink: profile.external_url || null,
+                      bioLink: bioLink || null,
                       verified: profile.is_verified || false,
                       followers: followerCount,
                       following: profile.following_count || 0,

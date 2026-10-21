@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from '../utils';
+import { resolveContact } from "@/lib/contact-extract";
 
 type LinkedInCreator = {
   handle: string;
@@ -165,10 +166,10 @@ export async function POST(request: NextRequest) {
 
           const followerCount = profileData.followers || 0;
 
-          let email: string | null = null;
-          const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-          const bioEmails = profileData.about?.match(emailRegex);
-          if (bioEmails?.length) email = bioEmails[0];
+          const { email, bioLink } = resolveContact({
+            bio: profileData.about,
+            structuredWebsite: profileData.website || profileData.external_url || null,
+          });
 
           // Estimate engagement based on followers and activity
           const postsCount = profileData.recentPosts?.length || 0;
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
             profile_url: entry.profile_url,
             avatar: profileData.image || entry.avatar,
             bio: profileData.about || entry.post_description || null,
-            bioLink: null,
+            bioLink: bioLink || null,
             verified: false,
             followers: followerCount,
             following: 0,

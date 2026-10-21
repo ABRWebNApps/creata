@@ -97,15 +97,24 @@ export async function enrichLead(opts: EnrichOptions): Promise<EnrichResult> {
     }
 
     // Merge: identity first, niche second (niche fallback fires only if identity results are thin)
-    const allQueries = [...identityQueries, ...nicheQueries, ...nicheFallbackQueries];
+    // Cap the fan-out — firing 20+ queries at once trips Firecrawl's rate limit
+    // (429s), which previously produced empty results and generic-email fallback.
+    const MAX_QUERIES = 8;
+    const allQueries = [...identityQueries, ...nicheQueries, ...nicheFallbackQueries].slice(0, MAX_QUERIES);
 
-    // Run ALL queries through search
-    const searchResponses = await Promise.allSettled(
-      allQueries.map((q, idx) => searchEngine(q).then(results => ({
-        ...results,
-        isNiche: idx >= identityQueries.length,
-      }))),
-    );
+    // Run queries with limited concurrency (3 at a time) to stay under the rate limit
+    const CONCURRENCY = 3;
+    const searchResponses: PromiseSettledResult<{ results: { url: string; title: string; snippet: string }[]; rawHtml: string; isNiche: boolean }>[] = [];
+    for (let i = 0; i < allQueries.length; i += CONCURRENCY) {
+      const batch = allQueries.slice(i, i + CONCURRENCY);
+      const settled = await Promise.allSettled(
+        batch.map((q, j) => searchEngine(q).then((results) => ({
+          ...results,
+          isNiche: i + j >= identityQueries.length,
+        }))),
+      );
+      searchResponses.push(...settled);
+    }
 
     // Collect all search results, detect snippets containing @ (email signals)
     const allResults: Array<{ url: string; title: string; snippet: string; isNiche: boolean }> = [];
@@ -303,9 +312,15 @@ function detectPlatformAlias(url: string, title: string, opts: EnrichOptions, se
   const platforms: Array<{ key: string; pattern: RegExp }> = [
     { key: "linkedin", pattern: /linkedin\.com\/in\// },
     { key: "github", pattern: /github\.com\// },
-    { key: "twitter", pattern: /twitter\.com\// },
+    { key: "twitter", pattern: /(?:twitter|x)\.com\// },
     { key: "instagram", pattern: /instagram\.com\// },
-    { key: "youtube", pattern: /youtube\.com\/@/ },
+    { key: "youtube", pattern: /youtube\.com\/(?:@|c\/|channel\/)/ },
+    { key: "pinterest", pattern: /pinterest\.[a-z.]+\// },
+    { key: "tiktok", pattern: /tiktok\.com\/@/ },
+    { key: "facebook", pattern: /facebook\.com\// },
+    { key: "threads", pattern: /threads\.(?:net|com)\/@/ },
+    { key: "medium", pattern: /medium\.com\/@/ },
+    { key: "behance", pattern: /behance\.net\// },
   ];
   for (const p of platforms) {
     if (p.key === opts.leadPlatform) continue;

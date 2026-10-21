@@ -12,8 +12,11 @@ import {
   X,
   Plus,
   Check,
+  Zap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useSubscription } from "@/lib/subscription-context";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +69,7 @@ interface Category {
 }
 
 export default function ResultsTable({ data }: ResultsTableProps) {
+  const { subscription } = useSubscription();
   // Defensive: guard against partial/missing data from safety-net fallback
     if (!data || !Array.isArray(data.creators)) {
       return (
@@ -86,6 +90,11 @@ export default function ResultsTable({ data }: ResultsTableProps) {
     visible: false,
     message: "",
   });
+
+  // Enrichment (plan-gated) — find an email for a lead whose profile had none
+  const [enrichingHandles, setEnrichingHandles] = useState<Set<string>>(new Set());
+  const [enrichedEmails, setEnrichedEmails] = useState<Record<string, string>>({});
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   // Category picker dialog
     const [showCategoryDialog, setShowCategoryDialog] = useState(false);
@@ -221,6 +230,66 @@ export default function ResultsTable({ data }: ResultsTableProps) {
 
   const saveLead = async (creator: Lead) => {
     openSaveDialog(creator);
+  };
+
+  const emailFor = (creator: Lead) => enrichedEmails[creator.handle] || creator.email;
+
+  const handleEnrich = async (creator: Lead) => {
+    // Plan entitlement gate — no access opens the upgrade dialogue, enrich never runs
+    if (!subscription?.canEnrich) {
+      setUpgradeOpen(true);
+      return;
+    }
+    if (enrichingHandles.has(creator.handle)) return;
+    setEnrichingHandles((prev) => new Set(prev).add(creator.handle));
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session?.data?.session?.access_token;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Persist the lead first so enrichment can run against a saved record
+      const saveRes = await fetch("/api/leads/save", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(creator),
+      });
+      const saved = await saveRes.json().catch(() => ({}));
+      const leadId = saved?.lead?.id;
+      if (!leadId) {
+        showToast("Could not prepare lead for enrichment");
+        return;
+      }
+      setSavedLeads((prev) => new Set(prev).add(creator.handle));
+
+      const res = await fetch("/api/osint/enrich", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ leadId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error || "Enrichment failed");
+        return;
+      }
+      const emails: Array<{ email: string; confidence: number }> = data.data?.emails || [];
+      if (emails.length > 0) {
+        const best = [...emails].sort((a, b) => b.confidence - a.confidence)[0];
+        setEnrichedEmails((m) => ({ ...m, [creator.handle]: best.email }));
+        showToast("Email found!");
+      } else {
+        showToast("No email found for this profile");
+      }
+    } catch (e) {
+      console.error("Enrich error:", e);
+      showToast("Enrichment failed");
+    } finally {
+      setEnrichingHandles((prev) => {
+        const n = new Set(prev);
+        n.delete(creator.handle);
+        return n;
+      });
+    }
   };
 
   const handleSaveWithCategory = async () => {
@@ -485,10 +554,16 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                 <div className="flex-1 bg-muted rounded-lg py-2 px-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Email</p>
                   <p className="text-sm truncate font-medium">
-                    {creator.email ? (
-                      <span className="text-green-700">{creator.email}</span>
+                    {emailFor(creator) ? (
+                      <span className="text-green-700">{emailFor(creator)}</span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <button
+                        onClick={() => handleEnrich(creator)}
+                        disabled={enrichingHandles.has(creator.handle)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 active:scale-[0.97] transition-all disabled:opacity-60"
+                      >
+                        {enrichingHandles.has(creator.handle) ? "Enriching…" : (<><Zap className="w-3 h-3" /> Enrich</>)}
+                      </button>
                     )}
                   </p>
                 </div>
@@ -602,15 +677,30 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {creator.email ? (
+                      {emailFor(creator) ? (
                         <div className="flex items-center space-x-2 text-sm">
                           <Mail className="w-4 h-4 text-green-600" />
-                          <span>{creator.email}</span>
+                          <span>{emailFor(creator)}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">
-                          Email not found
-                        </span>
+                        <button
+                          onClick={() => handleEnrich(creator)}
+                          disabled={enrichingHandles.has(creator.handle)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:scale-[0.97] transition-all disabled:opacity-60"
+                          title="Search for this profile's email"
+                        >
+                          {enrichingHandles.has(creator.handle) ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-amber-600 border-t-transparent" />
+                              Enriching…
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3.5 h-3.5" />
+                              Enrich
+                            </>
+                          )}
+                        </button>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -778,6 +868,33 @@ export default function ResultsTable({ data }: ResultsTableProps) {
               <Check className="w-4 h-4 mr-1" />
                             {saveAllMode ? "Save All" : "Save Lead"}
                           </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Dialog — shown when a non-entitled plan clicks Enrich */}
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-amber-500" />
+              Upgrade Required
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Email enrichment is available on the Pro and Premium plans. Upgrade to
+            search for this lead&apos;s email automatically.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setUpgradeOpen(false)}>
+              Cancel
+            </Button>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              See Plans
+            </Link>
           </DialogFooter>
         </DialogContent>
       </Dialog>

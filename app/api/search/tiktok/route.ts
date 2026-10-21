@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
+import { resolveContact } from "@/lib/contact-extract";
 
 type TikTokCreator = {
   handle: string;
@@ -168,10 +169,10 @@ export async function POST(request: NextRequest) {
           const stats = profileData.stats;
 
           if (user && stats) {
-            let email: string | null = null;
-            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-            const bioEmails = user.signature?.match(emailRegex);
-            if (bioEmails?.length) email = bioEmails[0];
+            const { email, bioLink } = resolveContact({
+              bio: user.signature,
+              structuredWebsite: user.bioLink?.link || null,
+            });
 
             let instagramHandle: string | null = null;
             if (user.bioLink?.link?.includes("instagram.com")) {
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
                                       profile_url: `https://tiktok.com/@${user.uniqueId}`,
                                       avatar: user.avatarLarger || entry.avatar,
                                       bio: user.signature || null,
-                                      bioLink: user.bioLink?.link || null,
+                                      bioLink: bioLink || null,
                                       verified: !!(user.verified || user.verificationTypeExternal > 0),
                                       followers: stats.followerCount,
                                       following: stats.followingCount,

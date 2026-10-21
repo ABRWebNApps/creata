@@ -126,15 +126,18 @@ export async function POST(request: NextRequest) {
       maxCrawlPerQuery: MAX_CRAWL_PER_QUERY,
     });
 
-    // 5. Return results — surface only real configuration errors, not
-    //    expected crawl/search failures (they're silent now in the engine)
+    // 5. Return results. Engine diagnostics are logged server-side only —
+    //    raw search/crawl failures must never surface in the customer UI.
+    if (result.errors.length > 0) {
+      console.warn("[osint] enrich diagnostics:", result.errors.join(" | "));
+    }
     return NextResponse.json({
       success: true,
       data: {
         emails: result.emails,
         phones: result.phones,
         aliases: result.aliases,
-        errors: result.errors.slice(0, 3),
+        errors: [],
         total_errors: result.errors.length,
       },
     });

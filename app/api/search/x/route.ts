@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
+import { resolveContact } from "@/lib/contact-extract";
 
 type XCreator = {
   handle: string;
@@ -183,10 +184,10 @@ export async function POST(request: NextRequest) {
       if (minFollowers !== undefined && minFollowers !== null && followerCount < minFollowers) continue;
       if (maxFollowers !== undefined && maxFollowers !== null && followerCount > maxFollowers) continue;
 
-      let email: string | null = null;
-      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-      const bioEmails = profileData.description?.match(emailRegex);
-      if (bioEmails?.length) email = bioEmails[0];
+      const { email, bioLink } = resolveContact({
+        bio: profileData.description,
+        structuredWebsite: profileData.url || null,
+      });
 
       let engagementRate: number;
       if (followerCount > 500000) {
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest) {
         profile_url: `https://x.com/${profileData.username}`,
         avatar: profileData.profile_image_url || null,
         bio: profileData.description || null,
-        bioLink: profileData.url || null,
+        bioLink: bioLink || null,
         verified: profileData.verified || false,
         followers: followerCount,
         following: profileData.following_count || 0,

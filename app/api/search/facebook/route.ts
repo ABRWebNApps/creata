@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
+import { resolveContact } from "@/lib/contact-extract";
 
 type FacebookCreator = {
   handle: string;
@@ -109,6 +110,10 @@ export async function POST(request: NextRequest) {
           const pageCategories = snapshot.page_categories || null;
 
           // Build creator from Ad Library page data
+          const { email: adEmail, bioLink: adBioLink } = resolveContact({
+            bio: bodyText,
+            structuredWebsite: linkUrl,
+          });
           const creator: FacebookCreator = {
             handle: handle,
             nickname: pageName,
@@ -116,12 +121,12 @@ export async function POST(request: NextRequest) {
             profile_url: profileUri || `https://facebook.com/${pageId}`,
             avatar: avatarUrl,
             bio: bodyText || null,
-            bioLink: linkUrl,
+            bioLink: adBioLink,
             verified: false,
             followers: pageLikes,
             friends_count: 0,
             engagement_rate: 0,
-            email: null,
+            email: adEmail,
             website: linkUrl,
             location: null,
             category: Array.isArray(pageCategories) ? pageCategories[0] : (typeof pageCategories === 'string' ? pageCategories : null),
@@ -157,9 +162,11 @@ export async function POST(request: NextRequest) {
           lead.avatar = p.profile_picture || p.picture_url || lead.avatar;
           lead.bio = p.about || p.description || lead.bio;
           lead.bioLink = p.website || p.external_url || lead.bioLink;
+          const fetched = resolveContact({ bio: lead.bio, structuredEmail: p.email, structuredWebsite: lead.bioLink });
+          lead.email = fetched.email;
+          lead.bioLink = fetched.bioLink;
           lead.location = p.location || p.hometown || lead.location;
           lead.category = p.category || p.page_type || lead.category;
-          lead.email = p.email || null;
           lead.followers = p.followers_count || p.fan_count || lead.followers;
           lead.friends_count = p.friends_count || 0;
           lead.verified = p.is_verified || lead.verified;
