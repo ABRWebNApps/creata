@@ -66,7 +66,9 @@ export default function WaveRidges({
       const u = h / 100;
       const rows = 30;
       const cols = 140;
-      const top = h * 0.16;
+      // Start the ridge stack at the very top of the hero so the effect
+      // fills the band under the nav instead of leaving it blank.
+      const top = h * 0.035;
       const bottom = h * 1.04;
       ctx.lineJoin = "round";
 
