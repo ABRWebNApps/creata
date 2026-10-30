@@ -90,8 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await logActivity("sign_out");
     await supabase.auth.signOut();
-    // Force full page reload so middleware catches the redirect
-    window.location.href = "/auth/signin";
+    // Full page reload to the landing page. A hard navigation clears any
+    // cached authed state, which is why this is not a client-side push.
+    window.location.href = "/";
   };
 
   return (
