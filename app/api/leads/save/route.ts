@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
         };
         if (creator.matched_comment != null) insertPayload.matched_comment = creator.matched_comment;
         if (creator.matched_caption != null) insertPayload.matched_caption = creator.matched_caption;
+        if (creator.matched_url != null) insertPayload.matched_url = creator.matched_url;
+        if (creator.lead_kind != null) insertPayload.lead_kind = creator.lead_kind;
+        if (creator.matched_age_days != null) insertPayload.matched_age_days = creator.matched_age_days;
 
         const { data, error } = await adminClient
               .from("saved_leads")
@@ -73,6 +76,9 @@ export async function POST(request: NextRequest) {
                                   };
                                   if (creator.matched_comment != null) updatePayload.matched_comment = creator.matched_comment;
                                                                     if (creator.matched_caption != null) updatePayload.matched_caption = creator.matched_caption;
+                                                                    if (creator.matched_url != null) updatePayload.matched_url = creator.matched_url;
+                                                                    if (creator.lead_kind != null) updatePayload.lead_kind = creator.lead_kind;
+                                                                    if (creator.matched_age_days != null) updatePayload.matched_age_days = creator.matched_age_days;
                                                     const { data: updateData, error: updateError } = await adminClient
                                                       .from("saved_leads")
                                                       .update(updatePayload)

@@ -22,6 +22,8 @@ export interface SocialComment {
   text: string;
   author: string | null;
   likes: number;
+  /** epoch seconds (TikTok create_time / IG created_at). null when absent. */
+  createdAt: number | null;
 }
 
 function normalizeComments(list: unknown): SocialComment[] {
@@ -31,10 +33,13 @@ function normalizeComments(list: unknown): SocialComment[] {
       const c = raw as Record<string, unknown>;
       const user = (c?.user ?? c?.author ?? {}) as Record<string, unknown>;
       const text = String(c?.text ?? c?.comment ?? c?.content ?? c?.message ?? "").trim();
+      const rawTs = c?.create_time ?? c?.created_at ?? c?.createdAt ?? c?.timestamp ?? null;
+      const createdAt = typeof rawTs === "number" ? rawTs : rawTs ? Math.floor(Date.parse(String(rawTs)) / 1000) || null : null;
       return {
         text,
         author: (user?.unique_id ?? user?.username ?? user?.name ?? c?.username ?? null) as string | null,
         likes: Number(c?.digg_count ?? c?.like_count ?? c?.comment_like_count ?? c?.likes ?? 0),
+        createdAt: Number.isFinite(createdAt as number) ? (createdAt as number) : null,
       };
     })
     .filter((c) => c.text.length > 0);

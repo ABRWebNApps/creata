@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { suggestPainPoints } from "../utils";
 import { resolveContact } from "@/lib/contact-extract";
-import { extractDemandSnippet, hasProductTerm } from "@/lib/intent";
-import { fetchPostComments, pickBestDemandComment } from "@/lib/social/comments";
-import { signalFields } from "@/lib/keywords";
+import { isRealDemand, isSellerSide, isFresh, ageInDays, isExcludedProfile } from "@/lib/demand";
 import { analyzeBrandProblems } from "@/lib/problem-analysis";
+import { signalFields } from "@/lib/keywords";
+import { fetchPostComments, type SocialComment } from "@/lib/social/comments";
+import { intentScore } from "@/lib/intent";
+
+/* ── TWO MODES, ONE ROUTE ────────────────────────────────────────────────
+ * Tab A  ("leads")      → the lead is the POST AUTHOR: a real creator /
+ *                         influencer in the niche. Gov / news / media
+ *                         profiles are excluded. Comments are NOT the lead.
+ * Tab B  ("painpoints") → the lead is the COMMENT AUTHOR: someone asking.
+ *                         Their own comment is the matching comment.
+ * The branch is on searchMode. They are two different products.
+ * ---------------------------------------------------------------------- */
 
 type TikTokCreator = {
   handle: string;
@@ -25,13 +34,17 @@ type TikTokCreator = {
   profile_fetched: boolean;
   score: number;
   pain_points: string[];
-    matched_comment?: string | null;
-    matched_caption?: string | null;
-  };
+  matched_comment?: string | null;
+  matched_caption?: string | null;
+  matched_url?: string | null;
+  matched_from?: string | null;
+  matched_age_days?: number | null;
+  lead_kind?: string | null;
+};
 
-// Profile fetches per search. Keywords = 1 credit each, profiles = 1 credit each.
-// 4 keywords + 15 profiles = 19 credits per search.
-const MAX_PROFILE_FETCHES = 30;
+const MAX_VIDEOS = 8;           // Tab B: comment fetches (1 credit each)
+const MAX_PROFILE_FETCHES = 15; // profile enrichments (1 credit each)
+const MAX_AGE_DAYS = 150;
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 1, backoffMs = 800): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -42,340 +55,269 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 1, ba
       clearTimeout(timeout);
       return res;
     } catch (err: any) {
-      const isTimeout = err?.name === 'AbortError' || err?.code === 'UND_ERR_CONNECT_TIMEOUT';
+      const isTimeout = err?.name === "AbortError" || err?.code === "UND_ERR_CONNECT_TIMEOUT";
       if (attempt < retries && isTimeout) {
-        const delay = backoffMs * Math.pow(2, attempt);
-        console.log(`Retry ${attempt + 1}/${retries} for ${url} after ${delay}ms`);
-        await new Promise(r => setTimeout(r, delay));
-      } else {
-        throw err;
-      }
+        await new Promise((r) => setTimeout(r, backoffMs * Math.pow(2, attempt)));
+      } else throw err;
     }
   }
-  throw new Error('Unreachable');
+  throw new Error("Unreachable");
 }
 
-// Calculate a quality score: higher = better lead.
-// Rewards: engagement rate, email presence, niche relevance.
-// Penalizes: extremely high follower count (hard to reach), no engagement.
-function calcScore(followers: number, engagementRate: number, hasEmail: boolean): number {
-  let score = 0;
-  // Sweet spot: 1k-50k followers = high engagement, easier outreach
+function calcScore(followers: number, engagementRate: number, hasEmail: boolean, demand = 0): number {
+  let score = demand * 20;
   if (followers >= 1000 && followers <= 50000) score += 30;
   else if (followers > 50000 && followers <= 200000) score += 20;
-  else if (followers > 200000) score += 5; // big accounts = hard outreach
-  else score += 10; // micro but engaged
-
-  // Engagement rate weight
+  else if (followers > 200000) score += 5;
+  else score += 10;
   if (engagementRate >= 5) score += 40;
   else if (engagementRate >= 3) score += 30;
   else if (engagementRate >= 1) score += 15;
-  else score += 0;
-
-  // Email = buying signal
   if (hasEmail) score += 30;
-
   return score;
 }
+
+type Post = {
+  url: string;
+  aweme_id: string | null;
+  create_time: number | null;
+  comment_count: number;
+  caption: string | null;
+  handle: string;
+  nickname: string | null;
+  avatar: string | null;
+  authorFollowers: number;
+  authorBio: string | null;
+  verified: boolean;
+};
+
+type Candidate = {
+  handle: string;
+  avatar: string | null;
+  /** the text this lead is matched on (their own comment, or their post caption) */
+  signal: string;
+  signalCaption: string | null;
+  signalTs: number | null;
+  demand: number;
+  sourceUrl: string | null;
+  broad: boolean;
+};
 
 export async function POST(request: NextRequest) {
   try {
     const parsed = await request.json();
-    const { keywords, maxProfiles, searchMode, minFollowers, maxFollowers, tier } = parsed;
-
-    // PRODUCT TERMS = the buyer's own nouns. Demand detection matches these,
-    // never the whole question keyword (which would match nothing).
-    const terms: string[] = Array.isArray(parsed.productTerms) && parsed.productTerms.length
-      ? parsed.productTerms
-      : (Array.isArray(keywords) ? keywords : []);
-
+    const { keywords, maxProfiles, minFollowers, maxFollowers, tier, searchMode } = parsed;
     if (!keywords || !Array.isArray(keywords)) {
-      return NextResponse.json(
-        { error: "Keywords array is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Keywords array is required" }, { status: 400 });
+    }
+    const terms: string[] = Array.isArray(parsed.productTerms) && parsed.productTerms.length
+      ? parsed.productTerms : keywords;
+    const apiKey = process.env.SCRAPE_CREATORS_API_KEY;
+    const cap = Math.min(maxProfiles || MAX_PROFILE_FETCHES, 30);
+    const maxAge = typeof parsed.maxAgeDays === "number" ? parsed.maxAgeDays : MAX_AGE_DAYS;
+    const mode: "author" | "commenter" = searchMode === "painpoints" ? "commenter" : "author";
+
+    // ── SHARED PHASE 1: recent posts in the niche ──
+    const posts = new Map<string, Post>();
+    await Promise.all(keywords.map(async (keyword: string) => {
+      try {
+        const sort = mode === "author" ? "relevance" : "date-posted";
+        const url = `https://api.scrapecreators.com/v1/tiktok/search/keyword?query=${encodeURIComponent(
+          keyword + (tier && tier !== "Global" ? ` ${tier}` : "")
+        )}&date_posted=last-6-months&sort_by=${sort}&count=40`;
+        const res = await fetchWithRetry(url, { headers: { "x-api-key": apiKey! } });
+        if (!res.ok) return;
+        const data = await res.json();
+        for (const item of (data.search_item_list || data.data?.search_item_list || [])) {
+          const a = item.aweme_info || {};
+          const au = a.author || {};
+          const id = a.aweme_id || item.aweme_id || item.id;
+          if (!au.unique_id || !id) continue;
+          const url2 = `https://www.tiktok.com/@${au.unique_id}/video/${id}`;
+          if (posts.has(url2)) continue;
+          posts.set(url2, {
+            url: url2,
+            aweme_id: String(id),
+            create_time: a.create_time ?? null,
+            comment_count: a.statistics?.comment_count || 0,
+            caption: a.desc || null,
+            handle: au.unique_id,
+            nickname: au.nickname || null,
+            avatar: au.avatar_thumb?.url_list?.[0] || null,
+            authorFollowers: au.follower_count || 0,
+            authorBio: au.signature || "",
+            verified: Boolean(au.custom_verify || (au.verification_type ?? 0) > 0),
+          });
+        }
+      } catch (err) {
+        console.error(`TikTok search failed for "${keyword}":`, err);
+      }
+    }));
+
+    const allPosts = Array.from(posts.values());
+
+    // ══ TAB A — the POST AUTHOR is the lead (real creators / influencers) ══
+    const candidates: Candidate[] = [];
+    if (mode === "author") {
+      const seen = new Set<string>();
+      const chosen = allPosts
+        .filter((p) => isFresh(p.create_time, maxAge * 2))            // avoid dormant accounts
+        .sort((a, b) => b.authorFollowers - a.authorFollowers)
+        .filter((p) => {
+          if (seen.has(p.handle)) return false;
+          seen.add(p.handle);
+          // never a government / news / media / nonprofit profile
+          return !isExcludedProfile(p.authorBio, p.handle);
+        })
+        .slice(0, cap);
+      for (const p of chosen) {
+        candidates.push({
+          handle: p.handle,
+          avatar: p.avatar,
+          signal: p.caption || p.authorBio || "",
+          signalCaption: p.caption,
+          signalTs: p.create_time,
+          demand: 0,
+          sourceUrl: p.url,
+          broad: false,
+        });
+      }
     }
 
-    const cap = Math.min(maxProfiles || MAX_PROFILE_FETCHES, 30);
+    // ══ TAB B — the COMMENT AUTHOR is the lead (someone actually asking) ══
+    if (mode === "commenter") {
+      const targets = allPosts
+        .filter((v) => isFresh(v.create_time, maxAge) && v.comment_count > 0)
+        .sort((a, b) => b.comment_count - a.comment_count)
+        .slice(0, MAX_VIDEOS);
 
-    const uniqueHandles = new Map<string, any>();
-
-    // PHASE 1: Keyword searches — collect ALL unique handles with publish_time=30 (~30 days = last month)
-    // PHASE 1: Keyword searches — run in PARALLEL. Sequential searches made the
-        // request take minutes (10 keywords x ~40s each) which is why it never
-        // returned. Parallel brings the worst case down to a single call's timeout.
-        await Promise.all(
-          keywords.map(async (keyword) => {
-          try {
-            const searchUrl = `https://api.scrapecreators.com/v1/tiktok/search/keyword?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&publish_time=30&count=60`;
-            const searchResponse = await fetchWithRetry(searchUrl, {
-              headers: {
-                "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
-              },
-            });
-
-            if (!searchResponse.ok) {
-              const errText = await searchResponse.text().catch(() => '');
-              console.error(`Search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
-              return;
-            }
-
-            const searchData = await searchResponse.json();
-            const videos = searchData.search_item_list || searchData.data?.search_item_list || [];
-
-            for (const item of videos) {
-              const author = item.aweme_info?.author;
-              if (!author?.unique_id) continue;
-              if (uniqueHandles.has(author.unique_id)) continue;
-
-              const matchedDesc = item.aweme_info?.desc || null;
-                            // SIGNAL: prefer the EXACT demand sentence, but NEVER leave the
-                            // insight blank — fall back to the caption. We then try to
-                            // upgrade it to a real DEMAND comment after the loop.
-                            const demand = extractDemandSnippet(matchedDesc, terms);
-                            const awemeId = item.aweme_info?.aweme_id || item.aweme_id || item.id || null;
-                            uniqueHandles.set(author.unique_id, {
-                              handle: author.unique_id,
-                              nickname: author.nickname || author.unique_id,
-                              follower_count: author.follower_count || 0,
-                              verified: !!(author.custom_verify || author.verification_type > 0),
-                              bio: author.signature || "",
-                              avatar: author.avatar_thumb?.url_list?.[0] || null,
-                              video_url: awemeId ? `https://www.tiktok.com/@${author.unique_id}/video/${awemeId}` : null,
-                                              matched_comment: demand,
-                                              matched_caption: matchedDesc,
-                                              has_intent: !!demand,
-                            });
-            }
-          } catch (err) {
-            console.error(`Error searching keyword "${keyword}":`, err);
+      const byHandle = new Map<string, Candidate>();
+      const broadPool: Candidate[] = [];
+      if (apiKey) {
+        await Promise.allSettled(targets.map(async (v) => {
+          const comments: SocialComment[] = await fetchPostComments(v.url, "tiktok", apiKey, 12000);
+          for (const c of comments) {
+            const text = (c.text || "").trim();
+            if (!c.author || !text || isSellerSide(text)) continue;
+            const age = ageInDays(c.createdAt);
+            if (age === null || age > maxAge) continue;
+            const demand = isRealDemand(text, terms, c.createdAt, undefined, maxAge);
+            const cand: Candidate = {
+              handle: c.author, avatar: null, signal: text, signalCaption: v.caption,
+              signalTs: c.createdAt,
+              demand: demand ? Math.max(1, intentScore(text, terms)) : 0,
+              sourceUrl: v.url, broad: !demand,
+            };
+            if (demand) {
+              const prev = byHandle.get(cand.handle);
+              if (!prev || cand.demand > prev.demand) byHandle.set(cand.handle, cand);
+            } else if (text.length > 15) broadPool.push(cand);
           }
-          })
-        );
+        }));
+      }
+      let list = Array.from(byHandle.values());
+      if (list.length === 0) {
+        const seen = new Set<string>();
+        list = broadPool.filter((l) => !seen.has(l.handle) && seen.add(l.handle)).slice(0, cap);
+      }
+      list.sort((a, b) => b.demand - a.demand);
+      candidates.push(...list);
+    }
 
-    let filtered = Array.from(uniqueHandles.values());
-        // Demand-first: real-demand leads get the (paid) profile fetch before noise.
-        filtered.sort((a, b) => Number(!!b.has_intent) - Number(!!a.has_intent));
-
-        // COMMENT MINING (the real signal): for the top few posts, pull the
-        // comments and promote an actual DEMAND ("where can I buy…") into
-        // matched_comment. Bounded + parallel, so it cannot stall the request.
-        // Costs ~1 credit per post with comments. Skipped with no key.
-        const apiKey = process.env.SCRAPE_CREATORS_API_KEY;
-        if (apiKey) {
-          const topPosts = filtered.filter((e: any) => e.video_url).slice(0, 6);
-          await Promise.allSettled(
-            topPosts.map(async (e: any) => {
-              const comments = await fetchPostComments(e.video_url, "tiktok", apiKey, 12000);
-              const best = pickBestDemandComment(comments, terms);
-              if (best) {
-                e.matched_comment = best.text.slice(0, 300);
-                e.matched_from = "comment";
-                e.has_intent = true;
-              }
-            })
+    // ── SHARED: enrich each lead's OWN profile (email, link, IG handle) ──
+    const toFetch = candidates.slice(0, cap);
+    const enriched = new Map<string, any>();
+    if (apiKey) {
+      await Promise.allSettled(toFetch.map(async (l) => {
+        try {
+          const r = await fetchWithRetry(
+            `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(l.handle)}`,
+            { headers: { "x-api-key": apiKey } }
           );
-        }
-        // NEVER-EMPTY SIGNAL: every lead gets a matched comment and a caption,
-        // whatever we found. Preference: demand comment → demand caption →
-        // caption sentence with a product term → first sentence.
-        for (const e of filtered as any[]) {
-          const sf = signalFields({
-            comment: e.matched_from === "comment" ? e.matched_comment : null,
-            caption: e.matched_caption,
-            bio: e.bio,
-            productTerms: terms,
-          });
-          e.matched_comment = sf.matched_comment;
-          e.matched_caption = sf.matched_caption;
-          e.matched_from = sf.matched_from;
-        }
-        // Follower filter applied AFTER profile fetch for accuracy
-
-    // Sort by follower count — prioritize mid-tier (1k-50k) over mega-accounts
-    const toFetch = filtered.slice(0, cap);
-    const rest = filtered.slice(cap);
+          if (r.ok) enriched.set(l.handle, await r.json());
+        } catch { /* non-fatal */ }
+      }));
+    }
 
     const creators: TikTokCreator[] = [];
+    for (const l of toFetch) {
+      const pj = enriched.get(l.handle);
+      const user = pj?.user;
+      const stats = pj?.stats;
+      const bio = user?.signature ?? null;
 
-    // Fetch profiles in parallel
-    const fetchBatch = async (batch: any[]) => {
-      const results = await Promise.allSettled(
-        batch.map((entry) =>
-          fetchWithRetry(
-            `https://api.scrapecreators.com/v1/tiktok/profile?handle=${entry.handle}`,
-            {
-              headers: {
-                "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
-              },
-            }
-          ).then((r) => (r.ok ? r.json() : Promise.reject("Profile fetch failed")))
-        )
-      );
+      const { email, bioLink } = resolveContact({
+        bio,
+        structuredWebsite: user?.bioLink?.link ?? null,
+      });
+      const igMatch = user?.bioLink?.link?.match(/instagram\.com\/([^/?]+)/);
+      const followers = stats?.followerCount || 0;
+      const engagementRate =
+        followers > 0 && stats?.videoCount > 0
+          ? parseFloat(((stats.heartCount / stats.videoCount / followers) * 100).toFixed(2))
+          : 0;
 
-      for (let i = 0; i < batch.length; i++) {
-        const entry = batch[i];
-        const result = results[i];
+      if (minFollowers !== undefined && minFollowers !== null && followers < minFollowers) continue;
+      if (maxFollowers !== undefined && maxFollowers !== null && followers > maxFollowers) continue;
 
-        if (result.status === "fulfilled") {
-          const profileData = result.value;
-          const user = profileData.user;
-          const stats = profileData.stats;
+      // matching fields are NEVER empty: comment mode → their comment;
+      // author mode → their matched post caption. signalFields guarantees it.
+      const sf = signalFields({
+        comment: mode === "commenter" ? l.signal : null,
+        caption: l.signalCaption || (mode === "author" ? l.signal : null),
+        bio,
+        productTerms: terms,
+      });
 
-          if (user && stats) {
-            const { email, bioLink } = resolveContact({
-              bio: user.signature,
-              structuredWebsite: user.bioLink?.link || null,
-            });
-
-            let instagramHandle: string | null = null;
-            if (user.bioLink?.link?.includes("instagram.com")) {
-              const igMatch = user.bioLink.link.match(/instagram\.com\/([^/?]+)/);
-              instagramHandle = igMatch ? igMatch[1] : null;
-            }
-
-            const engagementRate =
-              stats.followerCount > 0 && stats.videoCount > 0
-                ? parseFloat(
-                    (
-                      (stats.heartCount / stats.videoCount / stats.followerCount) *
-                      100
-                    ).toFixed(2)
-                  )
-                : 0;
-
-            const score = calcScore(stats.followerCount, engagementRate, email !== null);
-
-            if (minFollowers !== undefined && minFollowers !== null && stats.followerCount < minFollowers) continue;
-                                    if (maxFollowers !== undefined && maxFollowers !== null && stats.followerCount > maxFollowers) continue;
-
-
-                                    creators.push({
-                                                  handle: user.uniqueId,
-                                      nickname: user.nickname,
-                                      platform: "tiktok",
-                                      profile_url: `https://tiktok.com/@${user.uniqueId}`,
-                                      avatar: user.avatarLarger || entry.avatar,
-                                      bio: user.signature || null,
-                                      bioLink: bioLink || null,
-                                      verified: !!(user.verified || user.verificationTypeExternal > 0),
-                                      followers: stats.followerCount,
-                                      following: stats.followingCount,
-                                      total_likes: stats.heartCount,
-                                      video_count: stats.videoCount,
-                                      engagement_rate: engagementRate,
-                                      email,
-                                      instagram_handle: instagramHandle,
-                                                  profile_fetched: true,
-                                                  score: calcScore(user.followerCount || 0, user.heart || 0, user.verified || false),
-                                                  pain_points: suggestPainPoints(user.signature || null),
-                                                  matched_comment: entry.matched_comment || null,
-                                                  matched_caption: entry.matched_caption || null,
-                                                });
-          }
-        } else {
-          // Profile fetch failed — fall back to search-level data
-          const followerCount = entry.follower_count || 0;
-          const estEngagement = followerCount > 100000
-            ? parseFloat((Math.random() * 2 + 1).toFixed(2))
-            : followerCount > 10000
-            ? parseFloat((Math.random() * 3 + 2).toFixed(2))
-            : parseFloat((Math.random() * 5 + 3).toFixed(2));
-
-                    creators.push({
-                                handle: entry.handle,
-                                nickname: entry.nickname,
-                                platform: "tiktok",
-                                profile_url: `https://tiktok.com/@${entry.handle}`,
-                                avatar: entry.avatar,
-                                bio: entry.bio || null,
-                                bioLink: null,
-                                verified: entry.verified,
-                                followers: followerCount,
-                                following: 0,
-                                total_likes: 0,
-                                video_count: 0,
-                                engagement_rate: estEngagement,
-                                email: null,
-                                instagram_handle: null,
-                                            profile_fetched: false,
-                                                                    pain_points: suggestPainPoints(entry.bio || null),
-                                                                    score: calcScore(followerCount, estEngagement, false),
-                                                                    matched_comment: entry.matched_comment || null,
-                                                                    matched_caption: entry.matched_caption || null,
-                                                                  });
-                              }
-                            }
-                }
-
-
-
-    // Append remaining (non-fetched) leads
-        for (const entry of rest) {
-          const followerCount = entry.follower_count || 0;
-          if (minFollowers !== undefined && minFollowers !== null && followerCount < minFollowers) continue;
-          if (maxFollowers !== undefined && maxFollowers !== null && followerCount > maxFollowers) continue;
-          const estEngagement = followerCount > 100000
-        ? parseFloat((Math.random() * 2 + 1).toFixed(2))
-        : followerCount > 10000
-        ? parseFloat((Math.random() * 3 + 2).toFixed(2))
-        : parseFloat((Math.random() * 5 + 3).toFixed(2));
-
-
-              creators.push({
-              handle: entry.handle,
-              nickname: entry.nickname,
-              platform: "tiktok",
-              profile_url: `https://tiktok.com/@${entry.handle}`,
-              avatar: entry.avatar,
-              bio: entry.bio || null,
-              bioLink: null,
-              verified: entry.verified,
-              followers: followerCount,
-              following: 0,
-              total_likes: 0,
-              video_count: 0,
-              engagement_rate: estEngagement,
-              email: null,
-              instagram_handle: null,
-              profile_fetched: false,
-                      score: calcScore(followerCount, estEngagement, false),
-                      pain_points: suggestPainPoints(entry.bio || null),
-                      matched_comment: entry.matched_comment || null,
-                      matched_caption: entry.matched_caption || null,
-                    });
-    }
-
-    // PROBLEM ANALYSIS — grounded in THIS lead's data, never a template.
-    for (const c of creators as any[]) {
-      c.pain_points = analyzeBrandProblems({
-        bio: c.bio,
-        matched_comment: c.matched_comment,
-        matched_caption: c.matched_caption,
-        platform: c.platform,
-        followers: c.followers,
-        engagement_rate: c.engagement_rate,
-        email: c.email,
-        bioLink: c.bioLink,
+      creators.push({
+        handle: l.handle,
+        nickname: user?.nickname || l.handle,
+        platform: "tiktok",
+        profile_url: `https://tiktok.com/@${l.handle}`,
+        avatar: user?.avatarLarger || l.avatar,
+        bio,
+        bioLink: bioLink || null,
+        verified: Boolean(user?.verified || (user?.verificationTypeExternal ?? 0) > 0),
+        followers,
+        following: stats?.followingCount || 0,
+        total_likes: stats?.heartCount || 0,
+        video_count: stats?.videoCount || 0,
+        engagement_rate: engagementRate,
+        email: email || null,
+        instagram_handle: igMatch ? igMatch[1] : null,
+        profile_fetched: Boolean(user && stats),
+        score: calcScore(followers, engagementRate, email !== null, l.demand),
+        pain_points: analyzeBrandProblems({
+          bio,
+          matched_comment: sf.matched_comment,
+          matched_caption: sf.matched_caption,
+          platform: "tiktok",
+          followers,
+          engagement_rate: engagementRate,
+          email,
+          bioLink,
+        }),
+        matched_comment: sf.matched_comment,
+        matched_caption: sf.matched_caption,
+        matched_url: l.sourceUrl,
+        matched_from: mode === "commenter" ? "comment" : "post",
+        matched_age_days: ageInDays(l.signalTs),
+        lead_kind: mode === "commenter" ? (l.broad ? "commenter-broad" : "commenter") : "author",
       });
     }
 
-    // Sort by score descending — best leads first
     creators.sort((a, b) => b.score - a.score);
 
     return NextResponse.json({
       success: true,
+      lead_mode: mode,
       total_found: creators.length,
-      total_unique_handles: uniqueHandles.size,
-      profiles_fetched: toFetch.length,
-      credits_used: keywords.length + toFetch.length,
+      videos_scanned: allPosts.length,
+      credits_used: keywords.length + (mode === "commenter" ? MAX_VIDEOS : 0) + toFetch.length,
       creators,
     });
   } catch (error: any) {
     console.error("TikTok search error:", error);
-    return NextResponse.json(
-      { error: error.message || "TikTok search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "TikTok search failed" }, { status: 500 });
   }
 }

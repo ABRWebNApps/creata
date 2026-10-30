@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { filterRelevantLeads } from "@/lib/lead-quality";
 import { buildProductTerms } from "@/lib/keywords";
+import { isExcludedProfile } from "@/lib/demand";
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,7 +107,12 @@ export async function POST(request: NextRequest) {
         }
 
     const searchData = await searchResponse.json();
-    const creatorList = Array.isArray(searchData.creators) ? searchData.creators : [];
+    // TAB A only: never hand a government / news / media profile to the customer.
+    // (Tab B is comment-driven and never returns a broadcaster anyway.)
+    const rawCreators = Array.isArray(searchData.creators) ? searchData.creators : [];
+    const creatorList = searchMode === "painpoints"
+      ? rawCreators
+      : rawCreators.filter((c: any) => !isExcludedProfile(c?.bio, c?.handle));
     const relevantCreators = await filterRelevantLeads(
       keywordData.query_understanding?.target_category || query,
       creatorList,

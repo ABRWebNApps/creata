@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { expandQueryTerms } from "../../search/utils";
-import { demandQuestionKeywords, buildProductTerms, corePhrase } from "@/lib/keywords";
+import { buildProductTerms, corePhrase } from "@/lib/keywords";
+import { decodeBrief, buildAskQueries, specProductTerms } from "@/lib/query-spec";
 import { NEGATIVE_ADJACENCY, validateQueryUnderstanding, type QueryUnderstanding } from "@/lib/lead-quality";
 
 // ── FALLBACK KEYWORDS — broad category mapping (used when AI is unavailable) ──
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
     let niche = query;
     let keywords: string[] = [];
     let aiProductTerms: string[] = [];
+    let specTerms: string[] = [];
     let aiUsed = false;
     let queryUnderstanding: QueryUnderstanding | null = null;
 
@@ -227,10 +229,12 @@ export async function POST(request: NextRequest) {
         // Fallback if AI didn't produce valid keywords
         if (keywords.length === 0) {
           if (searchMode === "painpoints") {
-            // Tab B: DEMAND QUESTIONS only — we want people asking, not answers.
-            keywords = demandQuestionKeywords(query, tier);
-            niche = corePhrase([query], tier) || query;
-            console.log(`⚡ Demand-question keywords (Tab B): ${keywords.join(" | ")}`);
+            // Tab B: decode the brief into a spec, then emit ASK queries only.
+            const spec = decodeBrief(query, tier);
+            keywords = buildAskQueries(spec, 8);
+            specTerms = specProductTerms(spec);
+            niche = spec.verticals[0] || corePhrase([query], tier) || query;
+            console.log(`⚡ Ask queries (Tab B): ${keywords.join(" | ")}`);
           } else {
             const fallback = generateFallbackKeywords(query);
             niche = fallback.niche;
@@ -248,6 +252,7 @@ export async function POST(request: NextRequest) {
     // PRODUCT TERMS are what demand detection matches against. Always computed
     // from the user's own query first (that is the buyer's language), then AI terms.
     const product_terms = Array.from(new Set([
+      ...specTerms,
       ...buildProductTerms([query], tier),
       ...aiProductTerms.map((x) => x.toLowerCase().trim()),
       ...buildProductTerms(keywords, tier),

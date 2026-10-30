@@ -45,6 +45,11 @@ type SavedLead = {
   is_tracked: boolean;
   category_id: string | null;
   created_at: string;
+  matched_url: string | null;
+  matched_comment: string | null;
+  matched_caption: string | null;
+  lead_kind: string | null;
+  matched_age_days: number | null;
 };
 
 type Category = {
@@ -393,6 +398,7 @@ export default function MyLeadsPage() {
                         <th className="px-6 py-4 text-left text-sm font-semibold">Followers</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold">Engagement</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold">Platform</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold">Source</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
                       </tr>
                     </thead>
@@ -450,7 +456,23 @@ export default function MyLeadsPage() {
                                                         </span>
                           </td>
                           <td className="px-6 py-4 text-sm capitalize">{lead.platform}</td>
-                          <td className="px-6 py-4">
+                                                    <td className="px-6 py-4">
+                            {lead.matched_url ? (
+                              <a
+                                href={lead.matched_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                                title={lead.matched_comment ? `Source: ${lead.matched_comment.slice(0, 80)}` : "Open the source post"}
+                              >
+                                Source ↗
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+<td className="px-6 py-4">
                             <div className="flex items-center gap-1">
                               {lead.email && (
                                 <a

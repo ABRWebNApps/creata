@@ -285,10 +285,23 @@ export default function Home() {
                     }`}
                   >
                     {p === "x" ? "X" : p === "facebook" ? "Facebook" : p}
+                    {/* TikTok is the fully tuned engine; the rest are still being calibrated. */}
+                    {p !== "tiktok" && (
+                      <span className="ml-1.5 align-middle text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                        Beta
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
               <CountrySelect value={tier} onChange={setTier} />
+
+              {/* TikTok is the fully tuned engine; the other platforms are still being calibrated. */}
+              {platform !== "tiktok" && (
+                <p className="w-full order-last text-xs text-center text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                  {platform === "x" ? "X" : platform === "facebook" ? "Facebook" : platform[0].toUpperCase() + platform.slice(1)} is in <strong>beta</strong> — signal quality is still being calibrated. TikTok is the fully tuned engine.
+                </p>
+              )}
 
               <div className={`flex items-center gap-1.5 bg-white border border-input rounded-lg px-2.5 py-1 shadow-sm ${showFilters ? "flex-1" : ""}`}>
                 <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />

@@ -43,6 +43,9 @@ interface Lead {
     instagram_handle?: string;
     matched_comment?: string;
   matched_caption?: string;
+  matched_url?: string;
+  lead_kind?: string;
+  matched_age_days?: number;
   problem_analysis?: {
     what_is_broken: { claim: string; evidence: string; source_url?: string }[];
     severity: "low" | "medium" | "high";
@@ -526,6 +529,17 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                     <p className="text-xs text-blue-900 leading-relaxed line-clamp-2">{creator.matched_caption}</p>
                                   </>
                                 )}
+                                {creator.matched_url && (
+                                  <a
+                                    href={creator.matched_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
+                                  >
+                                    Source ↗
+                                  </a>
+                                )}
                               </div>
                             )}
 
@@ -666,6 +680,18 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                             </div>
                                           ) : (
                                             <span className="text-muted-foreground text-xs">—</span>
+                                          )}
+                                          {creator.matched_url && (
+                                            <a
+                                              href={creator.matched_url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                                              title="Open the post this signal was scraped from"
+                                            >
+                                              Source ↗
+                                            </a>
                                           )}
                                         </td>
                                         <td className="px-6 py-4 font-medium">
