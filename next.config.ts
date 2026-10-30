@@ -36,7 +36,9 @@ const contentSecurityPolicy = [
   ]
     .filter(Boolean)
     .join(" "),
-  "frame-src 'self' https://js.paystack.co https://checkout.paystack.com",
+  // Anything embedded in an <iframe> must be listed here or the browser shows
+  // "content is blocked". The hero video is a YouTube embed (components/landing/HeroVideo.tsx).
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://js.paystack.co https://checkout.paystack.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "media-src 'self' https:",
