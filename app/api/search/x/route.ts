@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
 import { resolveContact } from "@/lib/contact-extract";
+import { signalFields } from "@/lib/keywords";
+import { analyzeBrandProblems } from "@/lib/problem-analysis";
 
 type XCreator = {
   handle: string;
@@ -24,11 +26,11 @@ type XCreator = {
   matched_caption?: string | null;
 };
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoffMs = 3000): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 1, backoffMs = 800): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
       return res;
@@ -63,7 +65,11 @@ function calcScore(followers: number, engagementRate: number, hasEmail: boolean)
 
 export async function POST(request: NextRequest) {
   try {
-    const { keywords, searchMode, minFollowers, maxFollowers, tier } = await request.json();
+    const _parsed = await request.json();
+    const { keywords, searchMode, minFollowers, maxFollowers, tier } = _parsed;
+    const terms: string[] = Array.isArray(_parsed.productTerms) && _parsed.productTerms.length
+      ? _parsed.productTerms
+      : (Array.isArray(keywords) ? keywords : []);
 
     if (!keywords || !Array.isArray(keywords)) {
       return NextResponse.json(
@@ -77,7 +83,8 @@ export async function POST(request: NextRequest) {
     const pendingProfiles: { username: string; matched_comment: string | null; basicInfo: any; threadsProfileUrl?: string | null }[] = [];
 
     // PHASE 1: Search Threads by keyword to discover social media creators (1 credit per keyword)
-        for (const keyword of keywords) {
+        // PARALLEL — sequential made this the slowest route (10 keywords x ~40s).
+        await Promise.all(keywords.map(async (keyword) => {
           try {
             const searchUrl = `https://api.scrapecreators.com/v1/threads/search?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&count=60`;
             const searchResponse = await fetchWithRetry(searchUrl, {
@@ -89,7 +96,7 @@ export async function POST(request: NextRequest) {
             if (!searchResponse.ok) {
               const errText = await searchResponse.text().catch(() => '');
               console.error(`X search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
-              continue;
+              return;
             }
 
             const searchData = await searchResponse.json();
@@ -115,7 +122,7 @@ export async function POST(request: NextRequest) {
           } catch (err) {
             console.error(`Error searching X keyword "${keyword}":`, err);
           }
-        }
+        }));
 
     // PHASE 2: Fetch X/Twitter profiles for detail — up to 15 profile fetches
     const maxProfileFetches = searchMode === "painpoints" ? 10 : 15;
@@ -264,6 +271,29 @@ export async function POST(request: NextRequest) {
 
     // Sort by score descending
     creators.sort((a, b) => b.score - a.score);
+
+    // NEVER-EMPTY SIGNAL + grounded problem analysis for every lead returned.
+    for (const c of creators as any[]) {
+      const sf = signalFields({
+        comment: c.matched_from === "comment" ? c.matched_comment : null,
+        caption: c.matched_caption,
+        bio: c.bio,
+        productTerms: terms,
+      });
+      c.matched_comment = sf.matched_comment;
+      c.matched_caption = sf.matched_caption;
+      c.matched_from = sf.matched_from;
+      c.pain_points = analyzeBrandProblems({
+        bio: c.bio,
+        matched_comment: c.matched_comment,
+        matched_caption: c.matched_caption,
+        platform: c.platform,
+        followers: c.followers,
+        engagement_rate: c.engagement_rate,
+        email: c.email,
+        bioLink: c.bioLink,
+      });
+    }
 
     return NextResponse.json({
       success: true,

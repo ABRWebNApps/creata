@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from '../utils';
 import { resolveContact } from "@/lib/contact-extract";
+import { signalFields } from "@/lib/keywords";
+import { analyzeBrandProblems } from "@/lib/problem-analysis";
+import { extractDemandSnippet } from "@/lib/intent";
 
 type LinkedInCreator = {
   handle: string;
@@ -31,11 +34,11 @@ const MAX_PROFILE_FETCHES = 30;
 // Max search posts per keyword
 const MAX_SEARCH_POSTS = 60;
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoffMs = 3000): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 1, backoffMs = 800): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
       return res;
@@ -69,7 +72,11 @@ function calcScore(followers: number, hasEmail: boolean, hasAbout: boolean): num
 
 export async function POST(request: NextRequest) {
   try {
-    const { keywords, minFollowers, maxFollowers, tier } = await request.json();
+    const _parsed = await request.json();
+    const { keywords, minFollowers, maxFollowers, tier } = _parsed;
+    const terms: string[] = Array.isArray(_parsed.productTerms) && _parsed.productTerms.length
+      ? _parsed.productTerms
+      : (Array.isArray(keywords) ? keywords : []);
 
     if (!keywords || !Array.isArray(keywords)) {
       return NextResponse.json(
@@ -80,8 +87,9 @@ export async function POST(request: NextRequest) {
 
     const uniqueAuthors = new Map<string, any>();
 
-    // PHASE 1: Search LinkedIn posts by keyword (1 credit per keyword)
-    for (const keyword of keywords) {
+    // PHASE 1: Search LinkedIn posts by keyword — PARALLEL (sequential was minutes)
+    await Promise.all(
+      keywords.map(async (keyword) => {
       try {
         const searchUrl = `https://api.scrapecreators.com/v1/linkedin/search/posts?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&count=${MAX_SEARCH_POSTS}`;
         const searchResponse = await fetchWithRetry(searchUrl, {
@@ -93,7 +101,7 @@ export async function POST(request: NextRequest) {
         if (!searchResponse.ok) {
           const errText = await searchResponse.text().catch(() => '');
           console.error(`LinkedIn search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
-          continue;
+          return;
         }
 
         const searchData = await searchResponse.json();
@@ -117,14 +125,15 @@ export async function POST(request: NextRequest) {
             post_title: post.name || "",
             post_description: post.description || "",
             post_date: post.datePublished || "",
-            matched_comment: post.description || null,
-            matched_caption: null,
+            matched_comment: extractDemandSnippet(post.description || "", terms),
+            matched_caption: post.description || null,
           });
         }
       } catch (err) {
         console.error(`Error searching LinkedIn keyword "${keyword}":`, err);
       }
-    }
+      })
+    );
 
     // Filter by follower range
     let filtered = Array.from(uniqueAuthors.values());
@@ -284,6 +293,29 @@ export async function POST(request: NextRequest) {
 
     // Sort by score descending — best leads first
     creators.sort((a, b) => b.score - a.score);
+
+    // NEVER-EMPTY SIGNAL + grounded problem analysis for every lead returned.
+    for (const c of creators as any[]) {
+      const sf = signalFields({
+        comment: c.matched_from === "comment" ? c.matched_comment : null,
+        caption: c.matched_caption,
+        bio: c.bio,
+        productTerms: terms,
+      });
+      c.matched_comment = sf.matched_comment;
+      c.matched_caption = sf.matched_caption;
+      c.matched_from = sf.matched_from;
+      c.pain_points = analyzeBrandProblems({
+        bio: c.bio,
+        matched_comment: c.matched_comment,
+        matched_caption: c.matched_caption,
+        platform: c.platform,
+        followers: c.followers,
+        engagement_rate: c.engagement_rate,
+        email: c.email,
+        bioLink: c.bioLink,
+      });
+    }
 
     return NextResponse.json({
       success: true,

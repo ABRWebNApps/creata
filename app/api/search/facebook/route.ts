@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
 import { resolveContact } from "@/lib/contact-extract";
+import { signalFields } from "@/lib/keywords";
+import { analyzeBrandProblems } from "@/lib/problem-analysis";
 
 type FacebookCreator = {
   handle: string;
@@ -56,7 +58,11 @@ function calcScore(lead: Partial<FacebookCreator>): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { keywords, minFollowers, maxFollowers } = await request.json();
+    const _parsed = await request.json();
+    const { keywords, minFollowers, maxFollowers } = _parsed;
+    const terms: string[] = Array.isArray(_parsed.productTerms) && _parsed.productTerms.length
+      ? _parsed.productTerms
+      : (Array.isArray(keywords) ? keywords : []);
 
     if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
       return NextResponse.json(
@@ -185,6 +191,29 @@ export async function POST(request: NextRequest) {
 
     // Sort by score descending
     creators.sort((a, b) => b.score - a.score);
+
+    // NEVER-EMPTY SIGNAL + grounded problem analysis for every lead returned.
+    for (const c of creators as any[]) {
+      const sf = signalFields({
+        comment: c.matched_from === "comment" ? c.matched_comment : null,
+        caption: c.matched_caption,
+        bio: c.bio,
+        productTerms: terms,
+      });
+      c.matched_comment = sf.matched_comment;
+      c.matched_caption = sf.matched_caption;
+      c.matched_from = sf.matched_from;
+      c.pain_points = analyzeBrandProblems({
+        bio: c.bio,
+        matched_comment: c.matched_comment,
+        matched_caption: c.matched_caption,
+        platform: c.platform,
+        followers: c.followers,
+        engagement_rate: c.engagement_rate,
+        email: c.email,
+        bioLink: c.bioLink,
+      });
+    }
 
     return NextResponse.json({
       success: true,

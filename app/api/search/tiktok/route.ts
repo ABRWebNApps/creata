@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestPainPoints } from "../utils";
 import { resolveContact } from "@/lib/contact-extract";
+import { extractDemandSnippet, hasProductTerm } from "@/lib/intent";
+import { fetchPostComments, pickBestDemandComment } from "@/lib/social/comments";
+import { signalFields } from "@/lib/keywords";
+import { analyzeBrandProblems } from "@/lib/problem-analysis";
 
 type TikTokCreator = {
   handle: string;
@@ -29,11 +33,11 @@ type TikTokCreator = {
 // 4 keywords + 15 profiles = 19 credits per search.
 const MAX_PROFILE_FETCHES = 30;
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 2, backoffMs = 3000): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 1, backoffMs = 800): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
       return res;
@@ -76,7 +80,14 @@ function calcScore(followers: number, engagementRate: number, hasEmail: boolean)
 
 export async function POST(request: NextRequest) {
   try {
-    const { keywords, maxProfiles, searchMode, minFollowers, maxFollowers, tier } = await request.json();
+    const parsed = await request.json();
+    const { keywords, maxProfiles, searchMode, minFollowers, maxFollowers, tier } = parsed;
+
+    // PRODUCT TERMS = the buyer's own nouns. Demand detection matches these,
+    // never the whole question keyword (which would match nothing).
+    const terms: string[] = Array.isArray(parsed.productTerms) && parsed.productTerms.length
+      ? parsed.productTerms
+      : (Array.isArray(keywords) ? keywords : []);
 
     if (!keywords || !Array.isArray(keywords)) {
       return NextResponse.json(
@@ -90,52 +101,95 @@ export async function POST(request: NextRequest) {
     const uniqueHandles = new Map<string, any>();
 
     // PHASE 1: Keyword searches — collect ALL unique handles with publish_time=30 (~30 days = last month)
-    for (const keyword of keywords) {
-      try {
-        const searchUrl = `https://api.scrapecreators.com/v1/tiktok/search/keyword?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&publish_time=30&count=60`;
-        const searchResponse = await fetchWithRetry(searchUrl, {
-          headers: {
-            "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
-          },
-        });
+    // PHASE 1: Keyword searches — run in PARALLEL. Sequential searches made the
+        // request take minutes (10 keywords x ~40s each) which is why it never
+        // returned. Parallel brings the worst case down to a single call's timeout.
+        await Promise.all(
+          keywords.map(async (keyword) => {
+          try {
+            const searchUrl = `https://api.scrapecreators.com/v1/tiktok/search/keyword?query=${encodeURIComponent(keyword + (tier && tier !== "Global" ? ` ${tier}` : ""))}&publish_time=30&count=60`;
+            const searchResponse = await fetchWithRetry(searchUrl, {
+              headers: {
+                "x-api-key": process.env.SCRAPE_CREATORS_API_KEY!,
+              },
+            });
 
-        if (!searchResponse.ok) {
-          const errText = await searchResponse.text().catch(() => '');
-          console.error(`Search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
-          continue;
-        }
+            if (!searchResponse.ok) {
+              const errText = await searchResponse.text().catch(() => '');
+              console.error(`Search keyword "${keyword}" failed: ${searchResponse.status} ${errText.slice(0, 200)}`);
+              return;
+            }
 
-        const searchData = await searchResponse.json();
-        const videos = searchData.search_item_list || searchData.data?.search_item_list || [];
+            const searchData = await searchResponse.json();
+            const videos = searchData.search_item_list || searchData.data?.search_item_list || [];
 
-        for (const item of videos) {
-          const author = item.aweme_info?.author;
-          if (!author?.unique_id) continue;
-          if (uniqueHandles.has(author.unique_id)) continue;
+            for (const item of videos) {
+              const author = item.aweme_info?.author;
+              if (!author?.unique_id) continue;
+              if (uniqueHandles.has(author.unique_id)) continue;
 
-          const matchedDesc = item.aweme_info?.desc || null;
-                    // Relevance pre-filter: skip if matched content doesn't relate to any keyword
-                    if (matchedDesc && !keywords.some((kw: string) => {
-                      const fragments = kw.toLowerCase().split(/\s+/);
-                      return fragments.some((frag: string) => matchedDesc!.toLowerCase().includes(frag));
-                    })) continue;
-                              uniqueHandles.set(author.unique_id, {
-                      handle: author.unique_id,
-                      nickname: author.nickname || author.unique_id,
-                      follower_count: author.follower_count || 0,
-                      verified: !!(author.custom_verify || author.verification_type > 0),
-                      bio: author.signature || "",
-                      avatar: author.avatar_thumb?.url_list?.[0] || null,
-                      matched_comment: matchedDesc,
-                      matched_caption: matchedDesc,
-                    });
-        }
-      } catch (err) {
-        console.error(`Error searching keyword "${keyword}":`, err);
-      }
-    }
+              const matchedDesc = item.aweme_info?.desc || null;
+                            // SIGNAL: prefer the EXACT demand sentence, but NEVER leave the
+                            // insight blank — fall back to the caption. We then try to
+                            // upgrade it to a real DEMAND comment after the loop.
+                            const demand = extractDemandSnippet(matchedDesc, terms);
+                            const awemeId = item.aweme_info?.aweme_id || item.aweme_id || item.id || null;
+                            uniqueHandles.set(author.unique_id, {
+                              handle: author.unique_id,
+                              nickname: author.nickname || author.unique_id,
+                              follower_count: author.follower_count || 0,
+                              verified: !!(author.custom_verify || author.verification_type > 0),
+                              bio: author.signature || "",
+                              avatar: author.avatar_thumb?.url_list?.[0] || null,
+                              video_url: awemeId ? `https://www.tiktok.com/@${author.unique_id}/video/${awemeId}` : null,
+                                              matched_comment: demand,
+                                              matched_caption: matchedDesc,
+                                              has_intent: !!demand,
+                            });
+            }
+          } catch (err) {
+            console.error(`Error searching keyword "${keyword}":`, err);
+          }
+          })
+        );
 
     let filtered = Array.from(uniqueHandles.values());
+        // Demand-first: real-demand leads get the (paid) profile fetch before noise.
+        filtered.sort((a, b) => Number(!!b.has_intent) - Number(!!a.has_intent));
+
+        // COMMENT MINING (the real signal): for the top few posts, pull the
+        // comments and promote an actual DEMAND ("where can I buy…") into
+        // matched_comment. Bounded + parallel, so it cannot stall the request.
+        // Costs ~1 credit per post with comments. Skipped with no key.
+        const apiKey = process.env.SCRAPE_CREATORS_API_KEY;
+        if (apiKey) {
+          const topPosts = filtered.filter((e: any) => e.video_url).slice(0, 6);
+          await Promise.allSettled(
+            topPosts.map(async (e: any) => {
+              const comments = await fetchPostComments(e.video_url, "tiktok", apiKey, 12000);
+              const best = pickBestDemandComment(comments, terms);
+              if (best) {
+                e.matched_comment = best.text.slice(0, 300);
+                e.matched_from = "comment";
+                e.has_intent = true;
+              }
+            })
+          );
+        }
+        // NEVER-EMPTY SIGNAL: every lead gets a matched comment and a caption,
+        // whatever we found. Preference: demand comment → demand caption →
+        // caption sentence with a product term → first sentence.
+        for (const e of filtered as any[]) {
+          const sf = signalFields({
+            comment: e.matched_from === "comment" ? e.matched_comment : null,
+            caption: e.matched_caption,
+            bio: e.bio,
+            productTerms: terms,
+          });
+          e.matched_comment = sf.matched_comment;
+          e.matched_caption = sf.matched_caption;
+          e.matched_from = sf.matched_from;
+        }
         // Follower filter applied AFTER profile fetch for accuracy
 
     // Sort by follower count — prioritize mid-tier (1k-50k) over mega-accounts
@@ -290,6 +344,20 @@ export async function POST(request: NextRequest) {
                       matched_comment: entry.matched_comment || null,
                       matched_caption: entry.matched_caption || null,
                     });
+    }
+
+    // PROBLEM ANALYSIS — grounded in THIS lead's data, never a template.
+    for (const c of creators as any[]) {
+      c.pain_points = analyzeBrandProblems({
+        bio: c.bio,
+        matched_comment: c.matched_comment,
+        matched_caption: c.matched_caption,
+        platform: c.platform,
+        followers: c.followers,
+        engagement_rate: c.engagement_rate,
+        email: c.email,
+        bioLink: c.bioLink,
+      });
     }
 
     // Sort by score descending — best leads first

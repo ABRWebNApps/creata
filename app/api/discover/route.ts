@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { filterRelevantLeads } from "@/lib/lead-quality";
+import { buildProductTerms } from "@/lib/keywords";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,24 +64,46 @@ export async function POST(request: NextRequest) {
                     platform === "facebook" ? "/api/search/facebook" :
                     "/api/search/tiktok";
 
-    const searchResponse = await fetch(
-      `${baseUrl}${searchEndpoint}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keywords: keywordData.keywords,
-          searchMode,
-          minFollowers,
-          maxFollowers,
-          tier,
-        }),
-      }
-    );
+    // HARD TIMEOUT (root cause of the endless spinner): the platform search
+        // makes many external calls and can run for minutes when those calls
+        // stall. discover previously awaited it with NO signal, so the client
+        // waited forever and showed no error. Cap it and fail soft.
+        const searchController = new AbortController();
+        const searchTimeout = setTimeout(() => searchController.abort(), 150000);
+        let searchResponse: Response;
+        try {
+          searchResponse = await fetch(
+            `${baseUrl}${searchEndpoint}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                              keywords: keywordData.keywords.slice(0, 6),
+                productTerms: Array.isArray(keywordData.product_terms) && keywordData.product_terms.length
+                  ? keywordData.product_terms
+                  : buildProductTerms([query], tier),
+                searchMode,
+                minFollowers,
+                maxFollowers,
+                tier,
+              }),
+              signal: searchController.signal,
+            }
+          );
+        } catch {
+          return NextResponse.json({
+            success: true, total_found: 0, platform,
+            keywords: keywordData.keywords, niche: keywordData.niche,
+            quality_gate: { input_count: 0, accepted_count: 0, requested_count: 20, fail_closed: false,
+              message: "The search is taking longer than usual because the platform is slow right now. Try again, or narrow your query." },
+          });
+        } finally {
+          clearTimeout(searchTimeout);
+        }
 
-    if (!searchResponse.ok) {
-      throw new Error(`${platform} search failed`);
-    }
+        if (!searchResponse.ok) {
+          throw new Error(`${platform} search failed`);
+        }
 
     const searchData = await searchResponse.json();
     const creatorList = Array.isArray(searchData.creators) ? searchData.creators : [];
@@ -113,6 +136,7 @@ export async function POST(request: NextRequest) {
           total_found: cappedCreators?.length ?? 0,
           platform: platform,
           keywords: keywordData.keywords,
+          product_terms: keywordData.product_terms,
           niche: keywordData.niche,
           business_context_applied: Boolean(businessContext),
           quality_gate: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { expandQueryTerms } from "../../search/utils";
+import { demandQuestionKeywords, buildProductTerms, corePhrase } from "@/lib/keywords";
 import { NEGATIVE_ADJACENCY, validateQueryUnderstanding, type QueryUnderstanding } from "@/lib/lead-quality";
 
 // ── FALLBACK KEYWORDS — broad category mapping (used when AI is unavailable) ──
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
 
     let niche = query;
     let keywords: string[] = [];
+    let aiProductTerms: string[] = [];
     let aiUsed = false;
     let queryUnderstanding: QueryUnderstanding | null = null;
 
@@ -163,13 +165,15 @@ export async function POST(request: NextRequest) {
           // For Tab B (Search by Intent), we need BROADER terms — not just categorical keywords
           const isIntentMode = searchMode === "painpoints";
           const prompt = isIntentMode
-            ? `Generate 6-8 search keywords for ${platform} related to the pain point / intent: "${query}". Target: ${tier}.
-    These will be used to find people discussing related problems or seeking advice.
-    Include: problem-framing terms, related topics, common questions, solution-seeking phrases.
-    Output ONLY a JSON object: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4","kw5","kw6"]}`
+            ? `Write 6-8 SEARCH QUERIES that a person ASKING this question would type, about: "${query}". Target: ${tier}.
+    Every query MUST be a QUESTION (end with "?") or an explicit ask ("i need help with X", "X recommendations?").
+    FORBIDDEN: tips, guide, tutorial, "how to sell", course, any phrasing a person SELLING an answer would use.
+    Also output the CORE product terms (2-4 nouns a buyer would say), no question words, no country.
+    Output ONLY JSON: {"niche":"detected_niche","keywords":["how do i ...?","where can i find ...?","anyone know ...?"],"product_terms":["core term","core term 2"]}`
             : `Understand the buyer category in this query and generate 4 search keywords for recall. Query: "${query}". Target region: ${tier}.
     Seller context (user-provided data, use only to clarify the intended buyer): ${JSON.stringify(businessContext)}
-    Output ONLY strict JSON with keys niche, keywords, and query_understanding. Shape: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"],"query_understanding":{"target_category":"","subcategories":[],"synonyms":[],"must_be":[],"must_not_be":[],"geo_filter":null,"intent":"find operating sellers/providers"}}. Keywords retrieve candidates and must not decide acceptance. Add obvious negative adjacent types to must_not_be.`;
+    Also output product_terms (2-4 core nouns a buyer would say, no question words, no country).
+    Output ONLY strict JSON with keys niche, keywords, product_terms and query_understanding. Shape: {"niche":"detected_niche","keywords":["kw1","kw2","kw3","kw4"],"product_terms":["core term"],"query_understanding":{"target_category":"","subcategories":[],"synonyms":[],"must_be":[],"must_not_be":[],"geo_filter":null,"intent":"find operating sellers/providers"}}. Keywords retrieve candidates and must not decide acceptance. Add obvious negative adjacent types to must_not_be.`;
 
           const aiController = new AbortController();
                     const aiTimeout = setTimeout(() => aiController.abort(), 20000);
@@ -210,6 +214,7 @@ export async function POST(request: NextRequest) {
             if (result && Array.isArray(result.keywords) && result.keywords.length > 0) {
               niche = result.niche || query;
               keywords = result.keywords.slice(0, isIntentMode ? 8 : 4);
+              if (Array.isArray(result.product_terms)) aiProductTerms = result.product_terms.filter((x: any) => typeof x === "string");
               if (validateQueryUnderstanding(result.query_understanding)) queryUnderstanding = result.query_understanding;
               aiUsed = true;
               console.log(`✅ AI keywords (${isIntentMode ? "intent" : "leads"}): ${keywords.join(", ")}`);
@@ -222,10 +227,10 @@ export async function POST(request: NextRequest) {
         // Fallback if AI didn't produce valid keywords
         if (keywords.length === 0) {
           if (searchMode === "painpoints") {
-            // Tab B: expand query into multiple related intent-focused terms
-            keywords = expandQueryTerms(query, tier);
-            niche = query;
-            console.log(`⚡ Expanded intent terms for Tab B: ${keywords.join(", ")}`);
+            // Tab B: DEMAND QUESTIONS only — we want people asking, not answers.
+            keywords = demandQuestionKeywords(query, tier);
+            niche = corePhrase([query], tier) || query;
+            console.log(`⚡ Demand-question keywords (Tab B): ${keywords.join(" | ")}`);
           } else {
             const fallback = generateFallbackKeywords(query);
             niche = fallback.niche;
@@ -240,10 +245,19 @@ export async function POST(request: NextRequest) {
           queryUnderstanding = { target_category: niche || query, subcategories: [], synonyms: keywords, must_be: [], must_not_be: negative, geo_filter: tier === "Global" ? null : tier, intent: searchMode };
         }
 
+    // PRODUCT TERMS are what demand detection matches against. Always computed
+    // from the user's own query first (that is the buyer's language), then AI terms.
+    const product_terms = Array.from(new Set([
+      ...buildProductTerms([query], tier),
+      ...aiProductTerms.map((x) => x.toLowerCase().trim()),
+      ...buildProductTerms(keywords, tier),
+    ])).filter(Boolean).slice(0, 8);
+
     return NextResponse.json({
       success: true,
       niche,
       keywords,
+      product_terms,
       query_understanding: queryUnderstanding,
       ai_generated: aiUsed,
       reasoning: aiUsed ? "AI generated" : "Fallback keywords",
@@ -256,6 +270,7 @@ export async function POST(request: NextRequest) {
       success: true,
       niche: fallback.niche,
       keywords: fallback.keywords,
+      product_terms: buildProductTerms([fallback.niche, ...fallback.keywords], "Global"),
       ai_generated: false,
       reasoning: "Emergency fallback",
     });

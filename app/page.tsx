@@ -49,7 +49,13 @@ export default function Home() {
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const response = await fetch("/api/discover", {
+      // HARD CLIENT CAP: the spinner must ALWAYS end. The server caps its own
+      // work at 150s; this guards a stalled connection or a dead tab.
+      const ctrl = new AbortController();
+      const kill = setTimeout(() => ctrl.abort(), 120000);
+      let response: Response;
+      try {
+        response = await fetch("/api/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(sessionData.session?.access_token ? { Authorization: `Bearer ${sessionData.session.access_token}` } : {}) },
         body: JSON.stringify({
@@ -61,7 +67,11 @@ export default function Home() {
           maxFollowers: maxFollowers ? parseInt(maxFollowers) : undefined,
           maxLeads: subscription?.maxLeadsPerSearch,
         }),
-      });
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(kill);
+      }
 
       if (!response.ok) throw new Error("Search failed");
 
@@ -71,7 +81,11 @@ export default function Home() {
       await consumeCredit();
       logActivity("search", { query, platform, tier, searchMode, total_found: data.total_found });
     } catch (err: any) {
-      setError(err.message);
+      setError(
+        err?.name === "AbortError"
+          ? "Search timed out — the platforms were slow. Try again or narrow the query."
+          : err.message
+      );
     } finally {
       setLoading(false);
     }

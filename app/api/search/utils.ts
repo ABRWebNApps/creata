@@ -1,6 +1,9 @@
 // ── Filtering: exclude gov/media/news, verify relevance, check pain-point signal ──
 // ── Query expansion for Tab B (Search by Intent) ──
 
+import { isDemand } from "@/lib/intent";
+import { analyzeBrandProblems, type BrandInput } from "@/lib/problem-analysis";
+
 /**
  * expandQueryTerms — expands a raw user query into multiple related search terms
  * for Tab B (pain-point/intent search). Uses pattern-based expansion, not LLM calls.
@@ -108,17 +111,14 @@ export function isHighValueLead(
     }
   }
 
-  // Stage 2: Keyword relevance — matched content must contain at least one keyword
+  // Stage 2: SIGNAL quality — when we have the matched text, it must be a real
+  // DEMAND for what we sell (asking/buying marker + product term), not a
+  // generic post that merely contains the keyword. This is the whole point:
+  // "how do i buy detol soap" counts, "detol soap is nice" does not.
   if (matchedContent) {
-    const hasKeyword = keywords.some((kw) => {
-      const fragments = kw.toLowerCase().split(/\s+/);
-      return fragments.some((frag) => matchedContent!.toLowerCase().includes(frag));
-    });
-    if (!hasKeyword) return false;
-  }
-
-  // Stage 3: Pain-point signal — bio or matched content shows genuine need/struggle
-  if (textToCheck) {
+    if (!isDemand(matchedContent, keywords)) return false;
+  } else if (textToCheck) {
+    // No matched text: fall back to the pain-point signal (bio shows a need).
     const hasPainSignal = PAIN_POINT_KEYWORDS.some((kw) =>
       textToCheck.toLowerCase().includes(kw.toLowerCase())
     );
@@ -128,53 +128,9 @@ export function isHighValueLead(
   return true;
 }
 
-export function suggestPainPoints(bio: string | null): string[] {
-  if (!bio) return [
-    "Needs scalable systems for audience growth and engagement",
-    "Looking for strategic partnerships and monetization opportunities",
-    "Time management — busy with content creation and operations",
-  ];
-  const text = bio.toLowerCase();
-  const points: string[] = [];
-  const phrase = (keywords: string[], label: string): string => {
-    const sents = bio.split(/[.!\n]/).map(s => s.trim()).filter(Boolean);
-    for (const s of sents) {
-      const lower = s.toLowerCase();
-      for (const kw of keywords) {
-        if (lower.includes(kw)) {
-          const snippet = s.slice(0, 50).trim();
-          return `Bio flags as ${label}: "${snippet}"`;
-        }
-      }
-    }
-    return `Bio signals ${label} focus`;
-  };
-
-  if (text.includes("market") || text.includes("brand") || text.includes("growth") || text.includes("scale"))
-    points.push(phrase(["market", "brand", "growth"], "growth/marketing"));
-  if (text.includes("financ") || text.includes("invest") || text.includes("wealth") || text.includes("money"))
-    points.push(phrase(["financ", "invest", "wealth"], "finance/investing"));
-  if (text.includes("tech") || text.includes("startup") || text.includes("founder") || text.includes("saas"))
-    points.push(phrase(["tech", "startup", "founder"], "tech/startup"));
-  if (text.includes("health") || text.includes("wellness") || text.includes("fitness") || text.includes("nutrition"))
-    points.push(phrase(["health", "wellness", "fitness"], "health/wellness"));
-  if (text.includes("career") || text.includes("job") || text.includes("hire") || text.includes("recruit"))
-    points.push(phrase(["career", "job", "hire"], "career/hiring"));
-  if (text.includes("content") || text.includes("social") || text.includes("influencer"))
-    points.push(phrase(["content", "social", "influencer"], "content creation"));
-  if (text.includes("coach") || text.includes("consult") || text.includes("mentor"))
-    points.push(phrase(["coach", "consult", "mentor"], "coaching/consulting"));
-  if (text.includes("b2b") || text.includes("enterprise") || text.includes("ceo"))
-    points.push(phrase(["b2b", "enterprise"], "B2B/enterprise"));
-  if (text.includes("product") || text.includes("ecommerc") || text.includes("shop") || text.includes("store"))
-    points.push(phrase(["product", "ecommerc", "shop"], "e-commerce/products"));
-  if (text.includes("art") || text.includes("creator") || text.includes("musician") || text.includes("design"))
-    points.push(phrase(["art", "creator", "musician"], "creative/artistic"));
-
-  if (points.length < 2) {
-    const firstLine = bio.split(/[.!]/).map(s => s.trim()).filter(Boolean)[0] || '';
-    if (firstLine) points.push(`Bio opens with: "${firstLine.slice(0, 40)}" — may need growth strategy`);
-  }
-  if (points.length < 3) points.push("Looking for strategic partnerships and monetization opportunities");
-  return points.slice(0, 3);
+export function suggestPainPoints(
+  bio: string | null,
+  ctx?: Omit<BrandInput, "bio">
+): string[] {
+  return analyzeBrandProblems({ bio, ...(ctx || {}) });
 }

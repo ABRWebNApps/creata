@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { enrichLead } from "@/lib/osint/engine";
 import { MAX_CRAWL_PER_QUERY } from "@/lib/osint/config";
+import { enrichWithProviders } from "@/lib/osint/providers";
+import { checkAndDeductCredits } from "@/lib/credit-enforcement";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -126,6 +128,35 @@ export async function POST(request: NextRequest) {
       maxCrawlPerQuery: MAX_CRAWL_PER_QUERY,
     });
 
+    // 4b. Tier-2 paid providers (Apify / Dropleads) — fired ONLY when the
+    //     free Tier-1 engine found no email. Env-gated; a no-op with no keys.
+    let business: unknown = null;
+    if (result.emails.length === 0) {
+      try {
+        const searchName = (lead.nickname || lead.handle || "").trim();
+        const parts = searchName.split(/\s+/).filter(Boolean);
+        const provider = await enrichWithProviders({
+          fullName: searchName || null,
+          firstName: parts[0] ?? null,
+          lastName: parts.length > 1 ? parts[parts.length - 1] : null,
+          title: null,
+          country: null,
+          knownDomain: null,
+        });
+        business = provider.business;
+        if (provider.emails.length > 0) {
+          result.emails.push(...provider.emails);
+          const cost = Number(process.env.PROVIDER_EMAIL_CREDIT_COST ?? 3);
+          const chk = await checkAndDeductCredits(user.id, cost);
+          if (!chk.allowed) {
+            console.warn("[osint] provider email found but credit deduction failed:", chk.error);
+          }
+        }
+      } catch (e: unknown) {
+        console.warn("[osint] provider tier error:", (e as { message?: string })?.message);
+      }
+    }
+
     // 5. Return results. Engine diagnostics are logged server-side only —
     //    raw search/crawl failures must never surface in the customer UI.
     if (result.errors.length > 0) {
@@ -137,6 +168,7 @@ export async function POST(request: NextRequest) {
         emails: result.emails,
         phones: result.phones,
         aliases: result.aliases,
+        business,
         errors: [],
         total_errors: result.errors.length,
       },
