@@ -9,7 +9,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any; hasSession: boolean }>;
+  signUp: (email: string, password: string, consent?: { ageConfirmed: boolean; termsAccepted: boolean; policyVersion: string }) => Promise<{ error: any; hasSession: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 };
@@ -52,12 +52,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) { console.error("Signup currency could not be synchronized", error); }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    consent?: { ageConfirmed: boolean; termsAccepted: boolean; policyVersion: string }
+  ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { geo_source: "server" },
+        data: {
+          geo_source: "server",
+          // Consent evidence: recorded at signup so we can prove what was
+          // agreed to, and which version of the policies it referred to.
+          age_confirmed: consent?.ageConfirmed === true,
+          age_confirmed_at: consent?.ageConfirmed ? new Date().toISOString() : null,
+          terms_accepted: consent?.termsAccepted === true,
+          terms_accepted_at: consent?.termsAccepted ? new Date().toISOString() : null,
+          policy_version: consent?.policyVersion ?? null,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=%2Fonboarding`,
       },
     });

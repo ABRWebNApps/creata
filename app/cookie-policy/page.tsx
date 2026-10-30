@@ -1,10 +1,135 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import PolicyShell, { PolicyHeading, PolicyList } from "@/components/PolicyShell";
+import { COMPANY_NAME, EFFECTIVE_DATE, PRIVACY_EMAIL, SUPPORT_EMAIL } from "@/lib/legal";
+import { CONSENT_COOKIE_NAME, CONSENT_POLICY_VERSION } from "@/lib/consent";
+
+export const metadata: Metadata = {
+  title: `Cookie Policy | ${COMPANY_NAME}`,
+  description: `The cookies and browser storage ${COMPANY_NAME} uses, what each category does, and how to change your choices.`,
+};
 
 export default function CookiePolicyPage() {
-  return <main className="mx-auto max-w-3xl px-6 py-16 text-slate-800"><p className="mb-4 inline-block rounded bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Draft for legal review</p><h1 className="mb-2 text-4xl font-bold">Cookie Policy</h1><p className="mb-8 text-sm text-slate-500">Effective date: [EFFECTIVE DATE]</p>
-    <p>Creata uses browser storage to keep the service working and remember your optional cookie choices. This draft describes the current application source as reviewed on 29 September 2026. Confirm deployment configuration and vendors before publication.</p>
-    <h2 className="mt-8 text-xl font-semibold">Categories</h2><ul className="mt-3 list-disc space-y-2 pl-6"><li><b>Necessary:</b> authentication/session storage and your consent choice. These are required for requested services.</li><li><b>Preferences:</b> [LIST PREFERENCE STORAGE AFTER VERIFICATION].</li><li><b>Analytics:</b> [NAME PROVIDER, PURPOSE, AND RETENTION IF ENABLED].</li><li><b>Marketing:</b> [NAME PROVIDERS AND PURPOSE IF ENABLED].</li></ul>
-    <p className="mt-5">Optional categories default to off. Creata currently includes no analytics or advertising tag in the inspected application source. A later optional script must be loaded only after the matching choice is saved. The consent record stores a policy version, timestamp, and category choices in a first-party cookie; when signed in, the same record is also sent to Creata for storage. Cookie lifetime: six months.</p>
-    <h2 className="mt-8 text-xl font-semibold">Manage choices</h2><p className="mt-3">Use the Cookie settings link in the site footer to reopen your choices. You can also manage cookies in your browser. Blocking necessary storage may prevent sign-in or service features from working.</p>
-    <p className="mt-8">Questions: [CONTACT EMAIL]</p><Link className="mt-6 inline-block underline" href="/privacy-policy">Privacy Policy</Link></main>;
+  return (
+    <PolicyShell title="Cookie Policy">
+      <p className="text-sm text-slate-500">Effective date: {EFFECTIVE_DATE}</p>
+
+      <p>
+        {COMPANY_NAME} uses browser storage to keep the service working and to remember
+        your optional cookie choices. This policy explains what we set, why, and how you
+        change it. It should be read together with our{" "}
+        <Link className="underline" href="/privacy-policy">Privacy Policy</Link>.
+      </p>
+
+      <PolicyHeading>What cookies are</PolicyHeading>
+      <p>
+        Cookies are small text files placed on your device when you visit a website. They
+        are widely used to make websites work, to keep you signed in, and to remember the
+        choices you have made. Some also help a site owner understand how the site is
+        used. We also use local browser storage for the same purposes; where we say
+        "cookies" below, we mean cookies and equivalent browser storage.
+      </p>
+
+      <PolicyHeading>Categories we use</PolicyHeading>
+      <PolicyList
+        items={[
+          <>
+            <strong>Strictly necessary</strong> — authentication and session storage, plus
+            the record of your cookie choice itself. The service cannot function without
+            these, so they are set on the basis of our contract with you and do not
+            require consent.
+          </>,
+          <>
+            <strong>Preferences</strong> — remember choices such as your selected country
+            and currency so you do not have to set them again. Off until you choose them.
+          </>,
+          <>
+            <strong>Analytics</strong> — would let us measure how the service is used so we
+            can improve it. Off until you choose them.
+          </>,
+          <>
+            <strong>Advertising and session replay</strong> — we do not use advertising
+            cookies, cross-site tracking, session replay, or keystroke recording. We do not
+            run these even if you press "Accept all".
+          </>,
+        ]}
+      />
+
+      <PolicyHeading>What is set in practice</PolicyHeading>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-slate-300 text-left">
+              <th className="py-2 pr-4 font-semibold">Name</th>
+              <th className="py-2 pr-4 font-semibold">Category</th>
+              <th className="py-2 pr-4 font-semibold">Purpose</th>
+              <th className="py-2 font-semibold">Lifetime</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="py-2 pr-4">Supabase authentication tokens</td>
+              <td className="py-2 pr-4">Strictly necessary</td>
+              <td className="py-2 pr-4">
+                Keeps you signed in and secures requests to your account
+              </td>
+              <td className="py-2">Session / refreshed by Supabase</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="py-2 pr-4">
+                <code>{CONSENT_COOKIE_NAME}</code>
+              </td>
+              <td className="py-2 pr-4">Strictly necessary</td>
+              <td className="py-2 pr-4">
+                Stores your cookie choices, the policy version and the time you made them
+              </td>
+              <td className="py-2">6 months</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3">
+        Optional categories default to off. No optional cookie is set until you select it
+        and save. Your consent record stores the policy version ({CONSENT_POLICY_VERSION}),
+        a timestamp, and your category choices; when you are signed in, the same record is
+        stored against your account so we can demonstrate what you agreed to.
+      </p>
+
+      <PolicyHeading>Third-party cookies</PolicyHeading>
+      <p>
+        Embedded content and links to other sites (for example a video, a payment page, or
+        a social platform) may set their own cookies once you interact with them. Those
+        cookies are controlled by the third party and are governed by their policy, not
+        ours. Where we embed third-party content, we use privacy-enhanced modes where the
+        provider offers one.
+      </p>
+
+      <PolicyHeading>Manage your choices</PolicyHeading>
+      <p>
+        Use the <strong>Cookie Settings</strong> link in the site footer at any time to
+        reopen your choices and change or withdraw them. Withdrawal does not affect
+        processing that already took place lawfully before you withdrew.
+      </p>
+      <p>
+        You can also control cookies through your browser settings, including blocking or
+        deleting them. Blocking strictly necessary storage may prevent sign-in or other
+        parts of the service from working.
+      </p>
+
+      <PolicyHeading>Changes to this policy</PolicyHeading>
+      <p>
+        We review this policy regularly and update it when our practices change. The date
+        at the top shows when it was last updated. If we add a new optional category, we
+        will ask for your consent before setting anything in it.
+      </p>
+
+      <PolicyHeading>Contact</PolicyHeading>
+      <p>
+        Questions about cookies or this policy:{" "}
+        <a className="underline" href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>.
+        General support:{" "}
+        <a className="underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+      </p>
+    </PolicyShell>
+  );
 }

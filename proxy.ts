@@ -9,6 +9,14 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/callback",
   "/api/auth",
+  // Policy pages must be readable without an account — a privacy notice that
+  // requires a login does not meet the NDPA transparency requirement, and
+  // platform reviewers must be able to read them too.
+  "/privacy-policy",
+  "/cookie-policy",
+  "/terms",
+  "/acceptable-use",
+  "/data-requests",
 ];
 
 export async function proxy(request: NextRequest) {

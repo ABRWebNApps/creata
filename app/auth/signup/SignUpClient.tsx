@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Sparkles, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { MINIMUM_AGE, POLICY_VERSION } from "@/lib/legal";
 
 export default function SignUpClientPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,9 @@ export default function SignUpClientPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // NDPA: consent must be affirmative and recorded, and we only serve adults.
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
@@ -32,9 +36,25 @@ export default function SignUpClientPage() {
       return;
     }
 
+    if (!ageConfirmed) {
+      setError(
+        `You must confirm you are ${MINIMUM_AGE} or older. Accounts are not available to under-${MINIMUM_AGE}s, because that would require verifiable parental consent under the Nigeria Data Protection Act.`
+      );
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError("Please accept the Terms and Conditions, Privacy Policy and Cookie Policy to continue.");
+      return;
+    }
+
     setLoading(true);
 
-    const { error, hasSession } = await signUp(email, password);
+    const { error, hasSession } = await signUp(email, password, {
+      ageConfirmed,
+      termsAccepted,
+      policyVersion: POLICY_VERSION,
+    });
 
     if (error) {
       setError(error.message);
@@ -163,18 +183,53 @@ export default function SignUpClientPage() {
               </div>
             </div>
 
+            {/* Consent — NDPA requires an affirmative, documented choice */}
+            <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={(e) => setAgeConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  required
+                />
+                <span className="text-sm text-gray-700">
+                  I confirm I am <strong>{MINIMUM_AGE} years or older</strong>. Creata is a
+                  business tool and is not available to under-{MINIMUM_AGE}s.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  required
+                />
+                <span className="text-sm text-gray-700">
+                  I have read and agree to the{" "}
+                  <Link href="/terms" className="font-medium text-blue-700 underline underline-offset-2">Terms and Conditions</Link>,{" "}
+                  <Link href="/privacy-policy" className="font-medium text-blue-700 underline underline-offset-2">Privacy Policy</Link>{" "}
+                  and{" "}
+                  <Link href="/cookie-policy" className="font-medium text-blue-700 underline underline-offset-2">Cookie Policy</Link>, and I understand how my data is used.
+                </span>
+              </label>
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !ageConfirmed || !termsAccepted}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
-            <p className="-mt-3 text-center text-sm text-gray-500">
-              Before creating an account, read our{" "}
-              <Link href="/terms" className="font-medium text-blue-700 underline underline-offset-2">Terms and Conditions</Link>{" "}
-              and <Link href="/privacy-policy" className="font-medium text-blue-700 underline underline-offset-2">Privacy Policy</Link>.
+            <p className="-mt-3 text-center text-xs text-gray-500">
+              You can withdraw marketing consent or change your cookie choices at any time,
+              and request a copy or deletion of your data — see our{" "}
+              <Link href="/data-requests" className="font-medium text-blue-700 underline underline-offset-2">data rights</Link>{" "}
+              page.
             </p>
           </form>
 
