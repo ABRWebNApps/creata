@@ -6,7 +6,7 @@ import FeatureTabs from "./FeatureTabs";
 import StatementBlock from "./StatementBlock";
 import FAQAccordion from "./FAQAccordion";
 import FinalCTA from "./FinalCTA";
-import LandingFooter from "./LandingFooter";
+
 import InfiniteTestimonials from "@/components/InfiniteTestimonials";
 
 export default function LandingPage() {
@@ -151,7 +151,7 @@ export default function LandingPage() {
       <FinalCTA />
 
       {/* ── Footer ── */}
-      <LandingFooter />
+
     </main>
   );
 }

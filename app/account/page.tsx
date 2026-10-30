@@ -404,12 +404,6 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <footer className="border-t border-gray-100 py-8">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-sm text-gray-400">Creata — AI-native lead generation</p>
-          <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()}</p>
-        </div>
-      </footer>
     </main>
   );
 }

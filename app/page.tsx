@@ -369,17 +369,6 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* Footer */}
-                <footer className="border-t border-black/[0.06] py-8">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      Creata — AI-native lead generation for GTM teams
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      &copy; {new Date().getFullYear()}
-                    </p>
-                  </div>
-                </footer>
               </main>
                 )}
               </>
